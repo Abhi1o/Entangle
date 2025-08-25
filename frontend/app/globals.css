@@ -1,0 +1,206 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 0, 0, 0;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-gradient-headings {
+    background: linear-gradient(
+      89.99deg,
+      rgba(255, 255, 255, 0.9) 0.01%,
+      rgba(251, 248, 252, 0.66) 83%
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .navbar-bg {
+    background: rgba(38, 38, 38, 0.9);
+    /* Border/Light */
+    border-width: 0px 1px 1px 1px;
+    border-style: solid;
+    border-color: rgba(252, 252, 252, 0.15);
+
+    box-shadow: 0px 16px 48px rgba(17, 17, 17, 0.05),
+      0px 6px 60px rgba(17, 17, 17, 0.03), 0px 8px 20px rgba(17, 17, 17, 0.07);
+    backdrop-filter: blur(4.5px);
+
+    border-radius: 0px 0px 24px 24px;
+  }
+
+  /* border */
+  .border-light {
+    border: 1px solid var(--border-light, hsla(0, 0%, 99%, 0.15));
+  }
+
+
+  /* bg */
+  .bg-srf-l2 {
+    background: var(--srf-l2, hsla(0, 0%, 11%, 0.9));
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    /* --primary: 0 0% 9%; */
+    --primary: 40 100% 81%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --text-color-medium-emphasis: 0 0% 95% 0.95;
+    --text-color-high-emphasis: 0 0% 98% 0.9;
+    --text-color-accent: 40 100% 81%;
+
+    --text-color-persistent-high-emphasis: 0 0% 7% 1;
+
+    /* --border-light: 0 0% 99% 0.15; */
+    --border-light: rgba(252, 252, 252, 0.15);
+
+    /* --action-primary-default: 40 22.9% 0.3%; */
+    --action-primary-default: 40 100% 81%;
+    --surface-level-1: 0 0% 10% 0.9;
+    --surface-level-2: 0 0% 11%;
+    --surface-level-4: 0 0% 15%;
+    --font-size-d1: 69px;
+    --font-size-d2: 48px;
+    --font-size-overl: 12px;
+    --font-size-h1: 42px;
+    --font-size-h2: 36px;
+    --font-size-bodyl: 18px;
+    --font-size-bodys: 12px;
+    --font-size-bodyxs: 10.5px;
+    --font-size-lblm: 15px;
+    --font-size-lbll: 18px;
+    --font-size-titlem: 21px;
+    --font-size-titlel: 24px;
+
+    /*  */
+    --shadowsambient: rgba(17, 17, 17, 0.07);
+    --shadowspenumbra: rgba(17, 17, 17, 0.03);
+    --shadowsumbra: rgba(17, 17, 17, 0.05);
+
+    /*  */
+    --radius-md-med: 20px;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    /* --primary: 0 0% 98%; */
+    --primary: 40 100% 81%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+
+    --text-color-medium-emphasis: 0 0% 95% 0.95;
+    --text-color-high-emphasis: 0 0% 98% 0.9;
+    --text-color-accent: 40 100% 81%;
+
+    /* --action-primary-default: 40 22.9% 0.3%; */
+    --action-primary-default: 40 100% 81%;
+    --surface-level-1: 0 0% 10% 0.9;
+    --surface-level-2: 0 0% 11%;
+    --surface-level-4: 0 0% 15%;
+
+    /* border */
+    /* --border-light: 0 0% 99% 0.15; */
+    --border-light: rgba(252, 252, 252, 0.15);
+
+    --font-size-d1: 69px;
+    --font-size-d2: 48px;
+    --font-size-overl: 12px;
+    --font-size-h2: 36px;
+    --font-size-bodyl: 18px;
+    --font-size-bodys: 12px;
+    --font-size-bodyxs: 10.5px;
+    --font-size-lblm: 15px;
+    --font-size-titlem: 21px;
+
+    /*  */
+    --shadowsambient: rgba(17, 17, 17, 0.07);
+    --shadowspenumbra: rgba(17, 17, 17, 0.03);
+    --shadowsumbra: rgba(17, 17, 17, 0.05);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

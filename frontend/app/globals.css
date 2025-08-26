@@ -2,6 +2,162 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom Para Modal Styles to match app's design */
+.para-modal {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.para-modal .para-button {
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  background: linear-gradient(135deg, #FFD700 0%, #FFED4E 100%) !important;
+  color: #000000 !important;
+  transition: all 0.3s ease !important;
+}
+
+.para-modal .para-button:hover {
+  border: 1px solid rgba(255, 215, 0, 0.5) !important;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2) !important;
+  transform: translateY(-1px) !important;
+}
+
+.para-modal .para-input {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(26, 26, 26, 0.8) !important;
+  color: #FFFFFF !important;
+}
+
+.para-modal .para-input:focus {
+  border: 1px solid rgba(255, 215, 0, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.1) !important;
+}
+
+.para-modal .para-card {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(26, 26, 26, 0.9) !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+.para-modal .para-text-secondary {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.para-modal .para-accent-text {
+  color: #FFD700 !important;
+}
+
+.para-modal .para-border-light {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Custom scrollbar for Para modal */
+.para-modal ::-webkit-scrollbar {
+  width: 6px;
+}
+
+.para-modal ::-webkit-scrollbar-track {
+  background: rgba(26, 26, 26, 0.5);
+}
+
+.para-modal ::-webkit-scrollbar-thumb {
+  background: rgba(255, 215, 0, 0.3);
+  border-radius: 3px;
+}
+
+.para-modal ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 215, 0, 0.5);
+}
+
+/* Enhanced focus states */
+.para-modal *:focus {
+  outline: 2px solid rgba(255, 215, 0, 0.3) !important;
+  outline-offset: 2px !important;
+}
+
+/* Loading states with yellow accent */
+.para-modal .para-loading {
+  border: 2px solid rgba(255, 215, 0, 0.2) !important;
+  border-top: 2px solid #FFD700 !important;
+}
+
+/* Success states */
+.para-modal .para-success {
+  color: #00D4AA !important;
+  border: 1px solid rgba(0, 212, 170, 0.3) !important;
+}
+
+/* Error states */
+.para-modal .para-error {
+  color: #FF4757 !important;
+  border: 1px solid rgba(255, 71, 87, 0.3) !important;
+}
+
+/* Custom animations */
+@keyframes para-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.para-modal {
+  animation: para-fade-in 0.3s ease-out !important;
+}
+
+/* Enhanced button states */
+.para-modal .para-button-secondary {
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+}
+
+.para-modal .para-button-secondary:hover {
+  border: 1px solid rgba(255, 215, 0, 0.3) !important;
+  background: rgba(255, 215, 0, 0.05) !important;
+}
+
+/* Link styling */
+.para-modal .para-link {
+  color: #FFD700 !important;
+  text-decoration: none !important;
+}
+
+.para-modal .para-link:hover {
+  color: #FFED4E !important;
+  text-decoration: underline !important;
+}
+
+/* Divider styling */
+.para-modal .para-divider {
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent) !important;
+  margin: 16px 0 !important;
+}
+
+/* Enhanced modal backdrop */
+.para-modal-backdrop {
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .para-modal {
+    margin: 16px !important;
+    border-radius: 16px !important;
+  }
+  
+  .para-modal .para-button {
+    padding: 12px 20px !important;
+    font-size: 16px !important;
+  }
+}
+
 :root {
   --foreground-rgb: 255, 255, 255;
   --background-rgb: 0, 0, 0;

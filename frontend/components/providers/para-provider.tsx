@@ -14,24 +14,28 @@ export function Providers({ children }: { children: React.ReactNode }) {
           apiKey: process.env.NEXT_PUBLIC_PARA_API_KEY!, // Your API key
         }}
         config={{
-          appName: "Your App Name",
+          appName: "Entangle",
         }}
         paraModalConfig={{
           // Enable Twitter OAuth
+          logo: "/logos/hero_logo.svg",
           oAuthMethods: ["TWITTER"],
           // Enable on-ramp in test mode (set to false for production)
           onRampTestMode: true,
-          // Theme customization
+          disableEmailLogin: true,
+          disablePhoneLogin: true,
+          // Enhanced theme customization to match app's design with light borders and yellow accents
           theme: {
-            foregroundColor: "#333333",
-            backgroundColor: "#FFFFFF",
-            accentColor: "#1DA1F2", // Twitter blue
-            mode: "light",
-            borderRadius: "md",
+            foregroundColor: "#FFFFFF",
+            backgroundColor: "#1c1c1c", // Deep black background
+            accentColor: "#FFD700", // Golden yellow primary accent (like "Go to app" button)
+            mode: "dark",
+            borderRadius: "xl", // More rounded corners for modern look
+            font: "var(--font-dm-sans), system-ui, sans-serif",
           },
-          // Enable recovery options
+          // Enhanced styling for better UX
           recoverySecretStepEnabled: true,
-          twoFactorAuthEnabled: false, // Optional
+          twoFactorAuthEnabled: false,
         }}
       >
         {children}

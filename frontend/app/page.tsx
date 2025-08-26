@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image"
 import Link from "next/link"
+import { useAccount } from "@getpara/react-sdk";
 
 import Hero from "@/components/home-page/Hero"
 import MMSection from "@/components/home-page/mm-section"
@@ -7,6 +10,9 @@ import Trending from "@/components/home-page/trending"
 import Footer from "@/components/layout/footer"
 
 export default function Home() {
+  const account = useAccount();
+  const isLoggedIn = account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0;
+  
   return (
     <main className="min-h-screen text-white font-sans">
       {/* Hero Section */}
@@ -87,11 +93,28 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Login Status Display */}
+      {isLoggedIn && (
+        <section className="mt-8 px-4 md:px-8 lg:px-16 xl:px-24">
+          <div className="container mx-auto">
+            <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 text-center">
+              <p className="text-green-400 font-medium">
+                ✅ Connected with Para! You can now access your dashboard.
+              </p>
+              {account.embedded.wallets && account.embedded.wallets.length > 0 && account.embedded.wallets[0]?.address && (
+                <p className="text-green-300 text-sm mt-2">
+                  Wallet: {account.embedded.wallets[0].address.slice(0, 6)}...{account.embedded.wallets[0].address.slice(-4)}
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Footer */}
       <Footer />
     </main>
   )
 }
-
 
 Home.whyDidYouRender = true;

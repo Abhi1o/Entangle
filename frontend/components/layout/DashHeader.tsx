@@ -1,11 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ParaLogin } from "@/components/auth/para-login";
+import { useModal, useAccount } from "@getpara/react-sdk";
 
 import Container from "@/components/layout/container";
 
 const DashHeader = () => {
+  const { openModal } = useModal();
+  const account = useAccount();
+  
+  const isLoggedIn = account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0;
+
+  const handleDashboardClick = (e: React.MouseEvent) => {
+    if (!isLoggedIn) {
+      e.preventDefault();
+      openModal();
+    }
+  };
+
   return (
     <div className="navbar-bg h-[80px] bg-surface-level4 border-b border-border-light rounded-b-[24px]">
       <Container className="h-full">
@@ -35,12 +49,12 @@ const DashHeader = () => {
               Marketplace
             </Link>
             <Link
-              href="/dashboard"
+              href={isLoggedIn ? "/dashboard" : "#"}
+              onClick={handleDashboardClick}
               className="text-lblm hover:text-white transition-colors"
             >
-              Dashboard
+              {isLoggedIn ? "Dashboard" : "Login"}
             </Link>
-            <ParaLogin />
           </nav>
           <div className="md:hidden">
             {/* Mobile menu button would go here */}

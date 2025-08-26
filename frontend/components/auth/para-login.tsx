@@ -1,17 +1,12 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { 
-  useVerifyOAuth, 
-  useWaitForLogin, 
-  useWaitForWalletCreation, 
-  useLogout
-} from '@getpara/react-sdk';
-import { useAuthState } from '../../hooks/use-auth-state';
+import React, { useState, useEffect } from 'react';
+import { ParaWeb } from '@getpara/web-sdk';
+import { Environment } from '@getpara/core-sdk';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { ChevronDown, LogOut, Wallet } from 'lucide-react';
+import { ChevronDown, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface User {
@@ -26,169 +21,103 @@ interface User {
 export function ParaLogin() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authState, setAuthState] = useAuthState();
-  const popupWindow = useRef<Window | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [para, setPara] = useState<ParaWeb | null>(null);
 
-  // Para hooks
-  const { verifyOAuth, status: oAuthStatus } = useVerifyOAuth();
-  const { waitForLogin, status: loginStatus } = useWaitForLogin();
-  const { waitForWalletCreation, status: walletStatus } = useWaitForWalletCreation();
-  const { logout, status: logoutStatus } = useLogout();
+  useEffect(() => {
+    const initPara = async () => {
+      try {
+        const paraInstance = new ParaWeb(
+          Environment.BETA,
+          process.env.NEXT_PUBLIC_PARA_APP_ID || 'your-para-app-id'
+        );
 
-  const handleTwitterLogin = async () => {
-    try {
-      verifyOAuth(
-        {
-          method: 'TWITTER',
-          onOAuthPopup: (oAuthPopup) => {
-            popupWindow.current = oAuthPopup;
-          },
-          isCanceled: () => popupWindow.current?.closed || false,
-        },
-        {
-          onSuccess: (authState) => {
-            setAuthState(authState);
-            
-            switch (authState.stage) {
-              case 'signup':
-                handleSignup(authState);
-                break;
-              case 'login':
-                handleLogin(authState);
-                break;
+        await paraInstance.init();
+        setPara(paraInstance);
+
+        // Check if user is already logged in
+        const isActive = await paraInstance.isSessionActive();
+        if (isActive) {
+          const isFullyLoggedIn = await paraInstance.isFullyLoggedIn();
+          if (isFullyLoggedIn) {
+            const wallets = paraInstance.wallets;
+            const firstWallet = Object.values(wallets)[0];
+            if (firstWallet) {
+              setUser({
+                walletAddress: firstWallet.address,
+                name: firstWallet.name || 'User',
+              });
+              setIsAuthenticated(true);
             }
-          },
-          onError: (error) => {
-            console.error('OAuth error:', error);
-            toast.error('Failed to login with Twitter');
-          },
+          }
         }
-      );
+      } catch (error) {
+        console.error('Para initialization error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initPara();
+  }, []);
+
+  const handleLogin = async () => {
+    if (!para) return;
+
+    try {
+      // Get OAuth URL for Twitter
+      const oauthUrl = await para.getOAuthURL({ method: 'TWITTER' as any });
+      
+      // Open popup for OAuth
+      const popup = window.open(oauthUrl, 'para-oauth', 'width=500,height=600');
+      
+      if (!popup) {
+        throw new Error('Popup blocked. Please allow popups for this site.');
+      }
+
+      // Wait for OAuth response
+      const oauthResult = await para.waitForOAuth({ popupWindow: popup });
+      
+      if (oauthResult.isError) {
+        throw new Error('OAuth login failed');
+      }
+
+      // Wait for login and setup
+      const loginResult = await para.waitForLoginAndSetup({ popupWindow: popup });
+      
+      if (loginResult.isComplete) {
+        // Get user info from wallets
+        const wallets = para.wallets;
+        const firstWallet = Object.values(wallets)[0];
+        if (firstWallet) {
+          setUser({
+            walletAddress: firstWallet.address,
+            name: firstWallet.name || 'User',
+            email: oauthResult.email,
+          });
+          setIsAuthenticated(true);
+          toast.success('Successfully logged in with Twitter!');
+        }
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast.error('Failed to login with Twitter');
     }
   };
 
-  const handleSignup = (authState: any) => {
-    // For new users, we'll use passkey if supported, otherwise password
-    const signupUrl = authState.isPasskeySupported && authState.passkeyUrl 
-      ? authState.passkeyUrl 
-      : authState.passwordUrl;
-    
-    if (signupUrl) {
-      popupWindow.current = window.open(signupUrl, 'ParaSignup');
-      
-      waitForWalletCreation(
-        {
-          isCanceled: () => popupWindow.current?.closed || false,
-        },
-        {
-          onSuccess: (result) => {
-            const { walletIds } = result;
-            if (walletIds && walletIds.EVM && walletIds.EVM.length > 0) {
-              const firstWalletAddress = walletIds.EVM[0];
-              setUser({
-                walletAddress: firstWalletAddress,
-                name: 'User',
-                email: authState.auth?.email,
-                profileImageUrl: authState.pfpUrl,
-                username: authState.username,
-              });
-              setIsAuthenticated(true);
-              toast.success('Successfully signed up with Twitter!');
-            }
-          },
-          onError: (error) => {
-            console.error('Wallet creation error:', error);
-            toast.error('Failed to create wallet');
-          },
-        }
-      );
-    }
-  };
-
-  const handleLogin = (authState: any) => {
-    // For existing users, we'll use passkey if available, otherwise password
-    const loginUrl = authState.passkeyUrl || authState.passwordUrl;
-    
-    if (loginUrl) {
-      popupWindow.current = window.open(loginUrl, 'ParaLogin');
-      
-      waitForLogin(
-        {
-          isCanceled: () => popupWindow.current?.closed || false,
-        },
-        {
-          onSuccess: (result) => {
-            const { needsWallet } = result;
-            
-            if (needsWallet) {
-              // Create wallet if needed
-              waitForWalletCreation(
-                {
-                  isCanceled: () => popupWindow.current?.closed || false,
-                },
-                {
-                  onSuccess: (walletResult) => {
-                    const { walletIds } = walletResult;
-                    if (walletIds && walletIds.EVM && walletIds.EVM.length > 0) {
-                      const firstWalletAddress = walletIds.EVM[0];
-                      setUser({
-                        walletAddress: firstWalletAddress,
-                        name: 'User',
-                        email: authState.auth?.email,
-                        profileImageUrl: authState.pfpUrl,
-                        username: authState.username,
-                      });
-                      setIsAuthenticated(true);
-                      toast.success('Successfully logged in with Twitter!');
-                    }
-                  },
-                  onError: (error) => {
-                    console.error('Wallet creation error:', error);
-                    toast.error('Failed to create wallet');
-                  },
-                }
-              );
-            } else {
-              // User already has wallet
-              setUser({
-                email: authState.auth?.email,
-                profileImageUrl: authState.pfpUrl,
-                username: authState.username,
-                name: authState.displayName,
-              });
-              setIsAuthenticated(true);
-              toast.success('Successfully logged in with Twitter!');
-            }
-          },
-          onError: (error) => {
-            console.error('Login error:', error);
-            toast.error('Failed to login');
-          },
-        }
-      );
-    }
-  };
-
   const handleLogout = async () => {
+    if (!para) return;
+
     try {
-      logout(
-        { clearPregenWallets: true },
-        {
-          onSuccess: () => {
-            setUser(null);
-            setIsAuthenticated(false);
-            setAuthState(undefined);
-            toast.success('Successfully logged out!');
-          },
-          onError: (error) => {
-            console.error('Logout error:', error);
-            toast.error('Failed to logout');
-          },
-        }
-      );
+      // Para doesn't have a direct logout method, so we'll clear the session
+      localStorage.clear();
+      sessionStorage.clear();
+      setUser(null);
+      setIsAuthenticated(false);
+      toast.success('Successfully logged out!');
+      
+      // Refresh the page to clear any remaining state
+      window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to logout');
@@ -199,8 +128,6 @@ export function ParaLogin() {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
-
-  const isLoading = oAuthStatus === 'pending' || loginStatus === 'pending' || walletStatus === 'pending' || logoutStatus === 'pending';
 
   if (isLoading) {
     return (
@@ -213,14 +140,13 @@ export function ParaLogin() {
   if (!isAuthenticated) {
     return (
       <Button 
-        onClick={handleTwitterLogin}
-        disabled={isLoading}
+        onClick={handleLogin}
         className="bg-[#1DA1F2] hover:bg-[#1a8cd8] text-white"
       >
         <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="currentColor">
           <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
         </svg>
-        Login with Twitter
+        Login with Para
       </Button>
     );
   }

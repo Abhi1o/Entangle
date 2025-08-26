@@ -1,21 +1,36 @@
 'use client';
 
-import React from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { AuthState } from '@getpara/react-sdk';
 
-const AuthStateContext = React.createContext<[
-  AuthState | undefined,
-  React.Dispatch<React.SetStateAction<AuthState | undefined>>
-]>([undefined, () => {}]);
+interface AuthStateContextType {
+  authState: AuthState | undefined;
+  setAuthState: React.Dispatch<React.SetStateAction<AuthState | undefined>>;
+}
 
-export function AuthStateProvider({ children }: React.PropsWithChildren) {
-  const [authState, setAuthState] = React.useState<AuthState | undefined>();
-  
+const AuthStateContext = createContext<AuthStateContextType>({
+  authState: undefined,
+  setAuthState: () => {},
+});
+
+interface AuthStateProviderProps {
+  children: ReactNode;
+}
+
+export function AuthStateProvider({ children }: AuthStateProviderProps) {
+  const [authState, setAuthState] = useState<AuthState | undefined>();
+
   return (
-    <AuthStateContext.Provider value={[authState, setAuthState]}>
+    <AuthStateContext.Provider value={{ authState, setAuthState }}>
       {children}
     </AuthStateContext.Provider>
   );
 }
 
-export const useAuthState = () => React.useContext(AuthStateContext);
+export const useAuthState = () => {
+  const context = useContext(AuthStateContext);
+  if (!context) {
+    throw new Error('useAuthState must be used within an AuthStateProvider');
+  }
+  return context;
+};

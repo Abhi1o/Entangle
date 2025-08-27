@@ -8,6 +8,14 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
 }
 
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .para-modal .para-button {
   border: 1px solid rgba(255, 215, 0, 0.3) !important;
   background: linear-gradient(135deg, #FFD700 0%, #FFED4E 100%) !important;

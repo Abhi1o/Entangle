@@ -18,7 +18,7 @@ const MMSection = () => {
             admire.
           </p>
           <Link
-            href="#"
+            href="/market-place"
             className="md:w-fit inline-flex items-center justify-center rounded-full border-2 border-primary px-4 md:px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
           >
             Buy your first <ChevronRight className="ml-1 h-4 w-4" />
@@ -36,7 +36,7 @@ const MMSection = () => {
             valuable insights and help others achieve their goals.
           </p>
           <Link
-            href="#"
+            href="/create-event"
             className="md:w-fit inline-flex items-center justify-center rounded-full border-2 border-primary px-4 md:px-6 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10"
           >
             Create your first <ChevronRight className="ml-1 h-4 w-4" />

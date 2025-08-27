@@ -6,19 +6,102 @@ import { Button } from "@/components/ui/button";
 import { useModal, useAccount } from "@getpara/react-sdk";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ChevronDown, LogOut, Wallet, User, Settings, Copy, ExternalLink } from "lucide-react";
+import { ChevronDown, LogOut, Wallet, User, Settings, Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useState, useEffect, useCallback } from "react";
 
 import Container from "@/components/layout/container";
-import { useState } from "react";
+
+// Types for wallet data
+interface WalletData {
+  balance: string;
+  balanceUSD: string;
+  transactionCount: number;
+  lastTransaction?: string;
+  gasUsed: string;
+  totalValue: string;
+}
 
 const DashHeader = () => {
   const { openModal } = useModal();
   const account = useAccount();
   const [copiedAddress, setCopiedAddress] = useState(false);
+  const [walletData, setWalletData] = useState<WalletData>({
+    balance: "0.00",
+    balanceUSD: "0.00",
+    transactionCount: 0,
+    gasUsed: "0",
+    totalValue: "0.00"
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  
   const isLoggedIn = account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0;
 
-  const handleDashboardClick = (e: React.MouseEvent) => {
+  // Fetch real-time wallet data
+  const fetchWalletData = useCallback(async () => {
+    const address = account.embedded.wallets?.[0]?.address;
+    if (!address) return;
+
+    setIsLoading(true);
+    try {
+      // Fetch ETH balance
+      const balanceResponse = await fetch(`https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest&apikey=${process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || 'demo'}`);
+      const balanceData = await balanceResponse.json();
+      
+      // Fetch transaction count
+      const txResponse = await fetch(`https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc&apikey=${process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || 'demo'}`);
+      const txData = await txResponse.json();
+      
+      // Fetch ETH price
+      const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+      const priceData = await priceResponse.json();
+      
+      const ethPrice = priceData.ethereum?.usd || 0;
+      const balanceWei = parseInt(balanceData.result || '0');
+      const balanceEth = balanceWei / Math.pow(10, 18);
+      const balanceUSD = (balanceEth * ethPrice).toFixed(2);
+      
+      // Calculate gas used from recent transactions
+      let totalGasUsed = 0;
+      if (txData.result && txData.result.length > 0) {
+        totalGasUsed = txData.result.reduce((acc: number, tx: any) => acc + parseInt(tx.gasUsed || '0'), 0);
+      }
+
+      setWalletData({
+        balance: balanceEth.toFixed(4),
+        balanceUSD,
+        transactionCount: parseInt(txData.result?.length || '0'),
+        lastTransaction: txData.result?.[0]?.timeStamp,
+        gasUsed: (totalGasUsed / Math.pow(10, 18)).toFixed(6),
+        totalValue: balanceUSD
+      });
+      
+      setLastUpdated(new Date());
+    } catch (error) {
+      console.error('Error fetching wallet data:', error);
+      toast.error('Failed to fetch wallet data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [account.embedded.wallets]);
+
+  // Auto-refresh wallet data every 30 seconds
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchWalletData();
+      const interval = setInterval(fetchWalletData, 30000); // 30 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn, fetchWalletData]);
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    fetchWalletData();
+    toast.success('Wallet data refreshed!');
+  };
+
+  const handleDashboardClick = (e: React.MouseEvent): void => {
     if (!isLoggedIn) {
       e.preventDefault();
       openModal();
@@ -70,6 +153,14 @@ const DashHeader = () => {
     }
   };
 
+  const handleSettings = () => {
+    // Navigate to settings page or open settings modal
+    // For now, we'll show a toast message
+    toast.info('Settings page coming soon!');
+    // You can replace this with actual navigation:
+    // window.location.href = '/settings';
+  };
+
   const truncateAddress = (address: string) => {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -81,6 +172,18 @@ const DashHeader = () => {
       return address.slice(2, 4).toUpperCase();
     }
     return 'U';
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    if (!timestamp) return 'Never';
+    const date = new Date(parseInt(timestamp) * 1000);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
   };
 
   return (
@@ -131,10 +234,9 @@ const DashHeader = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div className="hidden lg:flex flex-col items-start">
-                      
-                                              <span className="text-xs text-gray-300 font-mono">
-                          {truncateAddress(account.embedded.wallets?.[0]?.address || '')}
-                        </span>
+                      <span className="text-xs text-gray-300 font-mono">
+                        {truncateAddress(account.embedded.wallets?.[0]?.address || '')}
+                      </span>
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-300" />
                   </Button>
@@ -151,14 +253,52 @@ const DashHeader = () => {
                       </Avatar>
                       <div>
                         <span className="text-sm font-medium text-white">{account.embedded.email}</span>
-                        <p className="text-sm text-gray-300">Connected</p>
+                        <span className="text-xs text-green-400 flex items-center gap-1">
+                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                          Active
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Wallet Details */}
+                  
+
+                  {/* Real-time Wallet Balance & Account Details */}
                   <div className="p-4 border-b border-border-light">
-                    <div className="space-y-3">
+                    <div className="space-y-4">
+                      {/* Balance Section with Refresh */}
+                      <div className="bg-black/20 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-300">Wallet Balance</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                            <button
+                              onClick={handleRefresh}
+                              disabled={isLoading}
+                              className="p-1 hover:bg-white/10 rounded transition-colors"
+                            >
+                              <RefreshCw className={`w-3 h-3 text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-2xl font-bold text-white">
+                            {isLoading ? '...' : walletData.balance}
+                          </span>
+                          <span className="text-sm text-gray-400">ETH</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          ≈ ${isLoading ? '...' : walletData.balanceUSD} USD
+                        </div>
+                        <div className="text-xs text-gray-600 mt-1">
+                          Last updated: {lastUpdated.toLocaleTimeString()}
+                        </div>
+                      </div>
+
+                      {/* Real-time Account Details */}
+                      <div className="space-y-3">
+                        {/* Wallet Details */}
+                 
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-gray-300">Wallet Address</span>
                         <span
@@ -185,49 +325,20 @@ const DashHeader = () => {
                           </span>
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-300">Network</span>
-                        <span className="text-xs text-gray-400">Ethereum</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-300">Status</span>
-                        <span className="text-xs text-green-400 flex items-center gap-1">
-                          <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                          Active
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Wallet Balance & Account Details */}
-                  <div className="p-4 border-b border-border-light">
-                    <div className="space-y-4">
-                      {/* Balance Section */}
-                      <div className="bg-black/20 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-300">Wallet Balance</span>
-                          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        </div>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold text-white">0.00</span>
-                          <span className="text-sm text-gray-400">ETH</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">≈ $0.00 USD</div>
-                      </div>
-
-                      {/* Account Details */}
-                      <div className="space-y-3">
+              
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-300">Account Type</span>
-                          <span className="text-xs text-gray-400">Para Embedded</span>
+                          <span className="text-sm font-medium text-gray-300">Total Transactions</span>
+                          <span className="text-xs text-gray-400">{isLoading ? '...' : walletData.transactionCount}</span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-300">Created</span>
-                          <span className="text-xs text-gray-400">Today</span>
+                          <span className="text-sm font-medium text-gray-300">Last Transaction</span>
+                          <span className="text-xs text-gray-400">
+                            {isLoading ? '...' : (walletData.lastTransaction ? formatTimeAgo(walletData.lastTransaction) : 'Never')}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-300">Transactions</span>
-                          <span className="text-xs text-gray-400">0</span>
+                          <span className="text-sm font-medium text-gray-300">Total Gas Used</span>
+                          <span className="text-xs text-gray-400">{isLoading ? '...' : `${walletData.gasUsed} ETH`}</span>
                         </div>
                       </div>
                     </div>
@@ -236,22 +347,29 @@ const DashHeader = () => {
                   {/* Quick Actions */}
                   <div className="p-2">
                     <DropdownMenuItem 
+                      onClick={handleSettings}
+                      className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-yellow-500 rounded-2xl"
+                    >
+                      <Settings className="w-4 h-4" />
+                      <span>Settings</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
                       onClick={handleCopyAddress}
-                      className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-surface-level1 rounded"
+                      className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-yellow-500  rounded-2xl"
                     >
                       <Copy className="w-4 h-4" />
                       <span>Copy Address</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={handleViewOnExplorer}
-                      className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-surface-level1 rounded"
+                      className="flex items-center gap-2 p-2 text-gray-300 hover:text-white hover:bg-yellow-500  rounded-2xl"
                     >
                       <ExternalLink className="w-4 h-4" />
                       <span>View on Etherscan</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={handleLogout}
-                      className="flex items-center gap-2 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded"
+                      className="flex items-center gap-2 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20  rounded-2xl"
                     >
                       <LogOut className="w-4 h-4" />
                       <span>Logout</span>

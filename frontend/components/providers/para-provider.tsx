@@ -27,7 +27,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           // Enhanced theme customization to match app's design with light borders and yellow accents
           theme: {
             foregroundColor: "#FFFFFF",
-            backgroundColor: "#1c1c1c", // Deep black background
+            backgroundColor: "#0A0A0A", // Deep black background
             accentColor: "#FFD700", // Golden yellow primary accent (like "Go to app" button)
             mode: "dark",
             borderRadius: "xl", // More rounded corners for modern look

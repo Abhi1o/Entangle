@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@getpara/core-sdk": "1.18.1",
+    "@getpara/cosmos-wallet-connectors": "^1.18.1",
     "@getpara/react-sdk": "2.0.0-alpha.50",
     "@getpara/web-sdk": "1.18.1",
     "@hookform/resolvers": "^3.9.1",
@@ -45,6 +46,7 @@
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "1.0.4",
+    "critters": "^0.0.23",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",

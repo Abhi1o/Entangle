@@ -129,4 +129,3 @@ export const AuctionList: React.FC<AuctionListProps> = ({ service }) => {
     </div>
   );
 };
-

@@ -55,8 +55,8 @@ export class MeetingAuctionService {
 
   // Initialize provider and contract
   async initialize() {
-    if (typeof window !== 'undefined' && window.ethereum) {
-      this.provider = new ethers.providers.Web3Provider(window.ethereum);
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      this.provider = new ethers.providers.Web3Provider((window as any).ethereum as any);
       await this.provider.send("eth_requestAccounts", []);
       
       const signer = this.provider.getSigner();
@@ -180,23 +180,4 @@ export class MeetingAuctionService {
     };
   }
 }
-
-// Hook for using the contract service
-export const useMeetingAuction = (network: 'FUJI' | 'AVALANCHE' = 'FUJI') => {
-  const [service, setService] = React.useState<MeetingAuctionService | null>(null);
-  const [isInitialized, setIsInitialized] = React.useState(false);
-
-  React.useEffect(() => {
-    const initService = async () => {
-      const newService = new MeetingAuctionService(network);
-      const initialized = await newService.initialize();
-      setService(newService);
-      setIsInitialized(initialized);
-    };
-
-    initService();
-  }, [network]);
-
-  return { service, isInitialized };
-};
 

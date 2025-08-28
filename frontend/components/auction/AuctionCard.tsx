@@ -20,11 +20,26 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
   const [bidAmount, setBidAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingReturn, setPendingReturn] = useState('0');
+  const [currentUser, setCurrentUser] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
     loadAuction();
+    getCurrentUser();
   }, [auctionId]);
+
+  const getCurrentUser = async () => {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];
+        if (accounts && accounts.length > 0) {
+          setCurrentUser(accounts[0]);
+        }
+      } catch (error) {
+        console.error('Error getting current user:', error);
+      }
+    }
+  };
 
   const loadAuction = async () => {
     try {
@@ -32,12 +47,9 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
       setAuction(auctionData);
       
       // Get pending return for current user
-      if (typeof window !== 'undefined' && window.ethereum) {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          const pending = await service.getPendingReturn(auctionId, accounts[0]);
-          setPendingReturn(ethers.utils.formatEther(pending));
-        }
+      if (currentUser) {
+        const pending = await service.getPendingReturn(auctionId, currentUser);
+        setPendingReturn(ethers.utils.formatEther(pending));
       }
     } catch (error) {
       console.error('Error loading auction:', error);
@@ -134,6 +146,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
   const isActive = !auction.ended && currentBlock < auction.endBlock.toNumber();
   const currentBid = ethers.utils.formatEther(auction.highestBid);
   const reservePrice = ethers.utils.formatEther(auction.reservePrice);
+  const isHost = currentUser.toLowerCase() === auction.host.toLowerCase();
 
   return (
     <Card className="w-full max-w-md">
@@ -169,7 +182,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
           </div>
         </div>
 
-        {isActive && (
+        {isActive && !isHost && (
           <div className="space-y-2">
             <Input
               type="number"
@@ -205,8 +218,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
           </div>
         )}
 
-        {isActive && auction.host === (typeof window !== 'undefined' && window.ethereum ? 
-          await window.ethereum.request({ method: 'eth_accounts' }).then((accounts: string[]) => accounts[0]) : '') && (
+        {isActive && isHost && (
           <Button 
             onClick={endAuction} 
             disabled={loading}
@@ -231,4 +243,3 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
     </Card>
   );
 };
-

@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-
+  // Ensure proper output for Vercel
+  output: 'standalone',
+  
   transpilePackages: [
     "@getpara/react-sdk",
     "@getpara/react-components", 

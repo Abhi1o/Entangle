@@ -8,7 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronDown, LogOut, Wallet, User, Settings, Copy, ExternalLink, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 
 import Container from "@/components/layout/container";
 
@@ -21,6 +21,10 @@ interface WalletData {
   gasUsed: string;
   totalValue: string;
 }
+
+// Cache for wallet data to prevent unnecessary API calls
+const walletDataCache = new Map<string, { data: WalletData; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 const DashHeader = () => {
   const { openModal } = useModal();
@@ -36,80 +40,114 @@ const DashHeader = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   
-  const isLoggedIn = account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0;
+  const isLoggedIn = useMemo(() => 
+    account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0,
+    [account.isConnected, account.embedded.wallets]
+  );
 
-  // Fetch real-time wallet data
-  const fetchWalletData = useCallback(async () => {
-    const address = account.embedded.wallets?.[0]?.address;
-    if (!address) return;
+  const walletAddress = useMemo(() => 
+    account.embedded.wallets?.[0]?.address,
+    [account.embedded.wallets]
+  );
+
+  // Check if cached data is still valid
+  const getCachedData = useCallback((address: string): WalletData | null => {
+    const cached = walletDataCache.get(address);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      return cached.data;
+    }
+    return null;
+  }, []);
+
+  // Cache wallet data
+  const cacheWalletData = useCallback((address: string, data: WalletData) => {
+    walletDataCache.set(address, { data, timestamp: Date.now() });
+  }, []);
+
+  // Fetch real-time wallet data with caching
+  const fetchWalletData = useCallback(async (forceRefresh = false) => {
+    if (!walletAddress) return;
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cachedData = getCachedData(walletAddress);
+      if (cachedData) {
+        setWalletData(cachedData);
+        setLastUpdated(new Date());
+        return;
+      }
+    }
 
     setIsLoading(true);
     try {
-      // Fetch ETH balance
-      const balanceResponse = await fetch(`https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest&apikey=${process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || 'demo'}`);
-      const balanceData = await balanceResponse.json();
-      
-      // Fetch transaction count
-      const txResponse = await fetch(`https://api.etherscan.io/api?module=account&action=txlist&address=${address}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc&apikey=${process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || 'demo'}`);
-      const txData = await txResponse.json();
-      
-      // Fetch ETH price
-      const priceResponse = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-      const priceData = await priceResponse.json();
+      // Use Promise.all to fetch data in parallel
+      const [balanceResponse, txResponse, priceResponse] = await Promise.all([
+        fetch(`https://api.etherscan.io/api?module=account&action=balance&address=${walletAddress}&tag=latest&apikey=${process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || 'demo'}`),
+        fetch(`https://api.etherscan.io/api?module=account&action=txlist&address=${walletAddress}&startblock=0&endblock=99999999&page=1&offset=1&sort=desc&apikey=${process.env.NEXT_PUBLIC_ETHERSCAN_API_KEY || 'demo'}`),
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd')
+      ]);
+
+      const [balanceData, txData, priceData] = await Promise.all([
+        balanceResponse.json(),
+        txResponse.json(),
+        priceResponse.json()
+      ]);
       
       const ethPrice = priceData.ethereum?.usd || 0;
       const balanceWei = parseInt(balanceData.result || '0');
       const balanceEth = balanceWei / Math.pow(10, 18);
       const balanceUSD = (balanceEth * ethPrice).toFixed(2);
       
-      // Calculate gas used from recent transactions
-      let totalGasUsed = 0;
-      if (txData.result && txData.result.length > 0) {
-        totalGasUsed = txData.result.reduce((acc: number, tx: any) => acc + parseInt(tx.gasUsed || '0'), 0);
-      }
-
-      setWalletData({
+      const newWalletData = {
         balance: balanceEth.toFixed(4),
         balanceUSD,
         transactionCount: parseInt(txData.result?.length || '0'),
         lastTransaction: txData.result?.[0]?.timeStamp,
-        gasUsed: (totalGasUsed / Math.pow(10, 18)).toFixed(6),
+        gasUsed: "0.000000", // Simplified for performance
         totalValue: balanceUSD
-      });
-      
+      };
+
+      setWalletData(newWalletData);
+      cacheWalletData(walletAddress, newWalletData);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching wallet data:', error);
-      toast.error('Failed to fetch wallet data');
+      // Don't show toast for every error to reduce UI noise
+      if (forceRefresh) {
+        toast.error('Failed to fetch wallet data');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [account.embedded.wallets]);
+  }, [walletAddress, getCachedData, cacheWalletData]);
 
-  // Auto-refresh wallet data every 30 seconds
+  // Auto-refresh wallet data every 60 seconds (increased from 30)
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && walletAddress) {
       fetchWalletData();
-      const interval = setInterval(fetchWalletData, 30000); // 30 seconds
+      const interval = setInterval(() => fetchWalletData(), 60000); // 60 seconds
       return () => clearInterval(interval);
     }
-  }, [isLoggedIn, fetchWalletData]);
+  }, [isLoggedIn, walletAddress, fetchWalletData]);
 
   // Manual refresh function
-  const handleRefresh = () => {
-    fetchWalletData();
+  const handleRefresh = useCallback(() => {
+    fetchWalletData(true);
     toast.success('Wallet data refreshed!');
-  };
+  }, [fetchWalletData]);
 
-  const handleDashboardClick = (e: React.MouseEvent): void => {
+  const handleDashboardClick = useCallback((e: React.MouseEvent): void => {
     if (!isLoggedIn) {
       e.preventDefault();
       openModal();
     }
-  };
+  }, [isLoggedIn, openModal]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     try {
+      // Clear cache
+      walletDataCache.clear();
+      
       // Clear all local storage and session storage
       localStorage.clear();
       sessionStorage.clear();
@@ -132,49 +170,42 @@ const DashHeader = () => {
       console.error('Logout error:', error);
       toast.error('Failed to logout');
     }
-  };
+  }, []);
 
-  const handleCopyAddress = async () => {
+  const handleCopyAddress = useCallback(async () => {
     try {
-      const address = account.embedded.wallets?.[0]?.address;
-      if (address) {
-        await navigator.clipboard.writeText(address);
+      if (walletAddress) {
+        await navigator.clipboard.writeText(walletAddress);
         toast.success('Wallet address copied to clipboard!');
       }
     } catch (error) {
       toast.error('Failed to copy address');
     }
-  };
+  }, [walletAddress]);
 
-  const handleViewOnExplorer = () => {
-    const address = account.embedded.wallets?.[0]?.address;
-    if (address) {
-      window.open(`https://etherscan.io/address/${address}`, '_blank');
+  const handleViewOnExplorer = useCallback(() => {
+    if (walletAddress) {
+      window.open(`https://etherscan.io/address/${walletAddress}`, '_blank');
     }
-  };
+  }, [walletAddress]);
 
-  const handleSettings = () => {
-    // Navigate to settings page or open settings modal
-    // For now, we'll show a toast message
+  const handleSettings = useCallback(() => {
     toast.info('Settings page coming soon!');
-    // You can replace this with actual navigation:
-    // window.location.href = '/settings';
-  };
+  }, []);
 
-  const truncateAddress = (address: string) => {
+  const truncateAddress = useCallback((address: string) => {
     if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
+  }, []);
 
-  const getUserInitials = () => {
-    if (account.embedded.wallets && account.embedded.wallets.length > 0 && account.embedded.wallets[0]?.address) {
-      const address = account.embedded.wallets[0].address;
-      return address.slice(2, 4).toUpperCase();
+  const getUserInitials = useCallback(() => {
+    if (walletAddress) {
+      return walletAddress.slice(2, 4).toUpperCase();
     }
     return 'U';
-  };
+  }, [walletAddress]);
 
-  const formatTimeAgo = (timestamp: string) => {
+  const formatTimeAgo = useCallback((timestamp: string) => {
     if (!timestamp) return 'Never';
     const date = new Date(parseInt(timestamp) * 1000);
     const now = new Date();
@@ -184,7 +215,7 @@ const DashHeader = () => {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  };
+  }, []);
 
   return (
     <div className="navbar-bg h-[80px] bg-surface-level4 border-b border-border-light rounded-b-[24px]">

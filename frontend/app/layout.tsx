@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { DM_Sans } from 'next/font/google';
 import "./globals.css"
-// import '../lib/wdyr'
+// import '../lib/wdyr' // Disabled for performance optimization
 
 import { Providers } from "@/components/providers/para-provider";
 

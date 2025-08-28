@@ -102,4 +102,3 @@ export default function Home() {
   )
 }
 
-Home.whyDidYouRender = true;

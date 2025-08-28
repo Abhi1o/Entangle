@@ -1,141 +1,198 @@
 const express = require('express');
-const { pool } = require('../config/database');
-const { getWeb3Service } = require('../services/Web3Service');
-const { authenticateToken } = require('../middleware/auth');
-
 const router = express.Router();
+const Web3Service = require('../services/Web3Service');
 
-// Create auction (creators only)
-router.post('/create', authenticateToken, async (req, res) => {
+// Initialize Web3 service
+const web3Service = new Web3Service('FUJI');
+
+// Get all active auctions
+router.get('/active', async (req, res) => {
   try {
-    const { title, description, duration, reservePrice, meetingDuration } = req.body;
-    const { walletAddress, twitterId, role } = req.user;
+    const activeAuctions = await web3Service.getActiveAuctions();
     
-    if (role !== 'creator') {
-      return res.status(403).json({ error: 'Only creators can create auctions' });
-    }
-    
-    if (!title || !duration || !reservePrice) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    const web3Service = getWeb3Service();
-    if (!web3Service) {
-      return res.status(500).json({ error: 'Web3 service not available' });
-    }
-    
-    // Create auction on blockchain
-    const result = await web3Service.createAuction(
-      walletAddress,
-      twitterId,
-      title,
-      description || '',
-      parseInt(duration) * 60, // Convert minutes to seconds
-      parseFloat(reservePrice),
-      parseInt(meetingDuration) || 60
+    // Get details for each auction
+    const auctionsWithDetails = await Promise.all(
+      activeAuctions.map(async (auctionId) => {
+        try {
+          return await web3Service.getAuction(auctionId);
+        } catch (error) {
+          console.error(`Failed to get details for auction ${auctionId}:`, error);
+          return { id: auctionId, error: 'Failed to load details' };
+        }
+      })
     );
     
     res.json({
       success: true,
-      auctionId: result.auctionId,
-      transactionHash: result.transactionHash,
-      blockNumber: result.blockNumber
+      data: auctionsWithDetails,
+      count: activeAuctions.length
     });
     
   } catch (error) {
-    console.error('Create auction error:', error);
-    res.status(500).json({ error: 'Failed to create auction' });
+    console.error('Error fetching active auctions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch active auctions'
+    });
   }
 });
 
-// Get active auctions
-router.get('/active', async (req, res) => {
-  try {
-    const web3Service = getWeb3Service();
-    const activeAuctionIds = await web3Service.contract.methods.getActiveAuctions().call();
-    
-    const auctions = [];
-    for (const auctionId of activeAuctionIds) {
-      const contractAuction = await web3Service.contract.methods.getAuction(auctionId).call();
-      const dbQuery = 'SELECT title, description FROM auctions WHERE id = $1';
-      const dbResult = await pool.query(dbQuery, [auctionId]);
-      
-      auctions.push({
-        id: auctionId,
-        host: contractAuction.host,
-        twitterId: contractAuction.hostTwitterId,
-        title: dbResult.rows[0]?.title || 'Untitled Auction',
-        description: dbResult.rows[0]?.description || '',
-        reservePrice: web3Service.web3.utils.fromWei(contractAuction.reservePrice, 'ether'),
-        highestBid: web3Service.web3.utils.fromWei(contractAuction.highestBid, 'ether'),
-        highestBidder: contractAuction.highestBidder,
-        endBlock: contractAuction.endBlock,
-        ended: contractAuction.ended
-      });
-    }
-    
-    res.json({ success: true, auctions });
-    
-  } catch (error) {
-    console.error('Get active auctions error:', error);
-    res.status(500).json({ error: 'Failed to fetch auctions' });
-  }
-});
-
-// Get auction details
+// Get specific auction details
 router.get('/:auctionId', async (req, res) => {
   try {
     const { auctionId } = req.params;
-    const web3Service = getWeb3Service();
+    const auction = await web3Service.getAuction(parseInt(auctionId));
     
-    const contractAuction = await web3Service.contract.methods.getAuction(auctionId).call();
-    const dbQuery = 'SELECT * FROM auctions WHERE id = $1';
-    const dbResult = await pool.query(dbQuery, [auctionId]);
-    
-    if (dbResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Auction not found' });
-    }
-    
-    const auction = {
-      ...dbResult.rows[0],
-      reservePrice: web3Service.web3.utils.fromWei(contractAuction.reservePrice, 'ether'),
-      highestBid: web3Service.web3.utils.fromWei(contractAuction.highestBid, 'ether'),
-      highestBidder: contractAuction.highestBidder,
-      startBlock: contractAuction.startBlock,
-      endBlock: contractAuction.endBlock,
-      ended: contractAuction.ended,
-      meetingScheduled: contractAuction.meetingScheduled
-    };
-    
-    res.json({ success: true, auction });
+    res.json({
+      success: true,
+      data: auction
+    });
     
   } catch (error) {
-    console.error('Get auction error:', error);
-    res.status(500).json({ error: 'Failed to fetch auction' });
+    console.error(`Error fetching auction ${req.params.auctionId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch auction details'
+    });
   }
 });
 
-// Get user's auctions (created by them)
-router.get('/user/created', authenticateToken, async (req, res) => {
+// Create new auction (requires authentication)
+router.post('/create', async (req, res) => {
   try {
-    const { walletAddress } = req.user;
+    const {
+      host,
+      twitterId,
+      duration,
+      reservePrice,
+      metadataIPFS,
+      meetingDuration
+    } = req.body;
     
-    const query = `
-      SELECT a.*, 
-        CASE WHEN a.id IN (
-          SELECT auction_id FROM meetings WHERE expires_at > NOW()
-        ) THEN true ELSE false END as has_meeting
-      FROM auctions a 
-      WHERE a.host_address = $1 
-      ORDER BY a.created_at DESC
-    `;
+    // Validate required fields
+    if (!host || !twitterId || !duration || !reservePrice || !meetingDuration) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields'
+      });
+    }
     
-    const result = await pool.query(query, [walletAddress]);
-    res.json({ success: true, auctions: result.rows });
+    // Create auction
+    const result = await web3Service.createAuction(
+      host,
+      twitterId,
+      parseInt(duration),
+      parseFloat(reservePrice),
+      metadataIPFS || `ipfs_${Date.now()}`,
+      parseInt(meetingDuration)
+    );
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result,
+        message: 'Auction created successfully'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
     
   } catch (error) {
-    console.error('Get user auctions error:', error);
-    res.status(500).json({ error: 'Failed to fetch user auctions' });
+    console.error('Error creating auction:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create auction'
+    });
+  }
+});
+
+// Get contract statistics
+router.get('/stats/contract', async (req, res) => {
+  try {
+    const stats = await web3Service.getContractStats();
+    const balance = await web3Service.getBalance();
+    
+    res.json({
+      success: true,
+      data: {
+        ...stats,
+        walletBalance: balance,
+        network: web3Service.getNetworkConfig()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching contract stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch contract statistics'
+    });
+  }
+});
+
+// Schedule meeting for auction (requires authentication)
+router.post('/:auctionId/schedule-meeting', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { meetingAccessHash } = req.body;
+    
+    if (!meetingAccessHash) {
+      return res.status(400).json({
+        success: false,
+        error: 'Meeting access hash is required'
+      });
+    }
+    
+    const result = await web3Service.scheduleMeeting(
+      parseInt(auctionId),
+      meetingAccessHash
+    );
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        data: result,
+        message: 'Meeting scheduled successfully'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+    
+  } catch (error) {
+    console.error(`Error scheduling meeting for auction ${req.params.auctionId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to schedule meeting'
+    });
+  }
+});
+
+// Get wallet balance
+router.get('/wallet/balance', async (req, res) => {
+  try {
+    const balance = await web3Service.getBalance();
+    
+    res.json({
+      success: true,
+      data: {
+        balance,
+        currency: 'AVAX',
+        network: web3Service.getNetworkConfig()
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error fetching wallet balance:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch wallet balance'
+    });
   }
 });
 

@@ -23,12 +23,25 @@ module.exports = {
     mainnet: {
       url: process.env.MAINNET_URL || "",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+    },
+    // Avalanche Networks
+    avalanche: {
+      url: process.env.AVALANCHE_URL || "https://api.avax.network/ext/bc/C/rpc",
+      chainId: 43114,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+    },
+    fuji: {
+      url: process.env.FUJI_URL || "https://api.avax-test.network/ext/bc/C/rpc",
+      chainId: 43113,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
     }
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+    apiKey: {
+      avalanche: process.env.AVALANCHE_API_KEY,
+      fuji: process.env.AVALANCHE_API_KEY
+    }
   }
 };
-
 
 // npx hardhat run scripts/deploy.js --network hardhat

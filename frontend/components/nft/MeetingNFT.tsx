@@ -45,6 +45,24 @@ export const MeetingNFT: React.FC<MeetingNFTProps> = ({ tokenId, service, onBurn
   const burnNFTForMeeting = async () => {
     setBurning(true);
     try {
+      // First validate with backend
+      const validationResponse = await fetch(`/api/meetings/nft/${tokenId}/burn`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userAddress: await service.getProvider()?.getSigner().getAddress()
+        }),
+      });
+      
+      const validationResult = await validationResponse.json();
+      
+      if (!validationResult.success) {
+        throw new Error(validationResult.error);
+      }
+      
+      // If validation passes, burn NFT on blockchain
       const tx = await service.burnNFTForMeeting(tokenId);
       toast({
         title: "NFT Burned Successfully!",

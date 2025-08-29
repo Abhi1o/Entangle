@@ -133,6 +133,48 @@ router.get('/stats/contract', async (req, res) => {
   }
 });
 
+// End auction (backend only - for reliability)
+router.post('/:auctionId/end', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    
+    // Get auction details first
+    const auction = await web3Service.getAuction(parseInt(auctionId));
+    
+    // Check if auction can be ended
+    if (auction.ended) {
+      return res.status(400).json({
+        success: false,
+        error: 'Auction already ended'
+      });
+    }
+    
+    // End the auction
+    const tx = await web3Service.contract.endAuction(parseInt(auctionId));
+    const receipt = await tx.wait();
+    
+    console.log(`✅ Auction ${auctionId} ended successfully`);
+    console.log(`📋 Transaction hash: ${receipt.transactionHash}`);
+    
+    res.json({
+      success: true,
+      data: {
+        transactionHash: receipt.transactionHash,
+        blockNumber: receipt.blockNumber,
+        auctionId: parseInt(auctionId)
+      },
+      message: 'Auction ended successfully'
+    });
+    
+  } catch (error) {
+    console.error(`Error ending auction ${req.params.auctionId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to end auction'
+    });
+  }
+});
+
 // Schedule meeting for auction (requires authentication)
 router.post('/:auctionId/schedule-meeting', async (req, res) => {
   try {
@@ -169,6 +211,80 @@ router.post('/:auctionId/schedule-meeting', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to schedule meeting'
+    });
+  }
+});
+
+// Place bid with backend validation
+router.post('/:auctionId/bid', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { bidAmount, userAddress } = req.body;
+    
+    if (!bidAmount || !userAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'Bid amount and user address are required'
+      });
+    }
+    
+    // Get auction details
+    const auction = await web3Service.getAuction(parseInt(auctionId));
+    
+    // Validate auction is active
+    if (auction.ended) {
+      return res.status(400).json({
+        success: false,
+        error: 'Auction has already ended'
+      });
+    }
+    
+    // Validate bid amount
+    const currentBid = parseFloat(auction.highestBid);
+    const newBid = parseFloat(bidAmount);
+    const minIncrement = 0.01; // 0.01 AVAX minimum increment
+    
+    if (newBid <= currentBid + minIncrement) {
+      return res.status(400).json({
+        success: false,
+        error: `Bid must be at least ${(currentBid + minIncrement).toFixed(2)} AVAX`
+      });
+    }
+    
+    if (newBid < parseFloat(auction.reservePrice)) {
+      return res.status(400).json({
+        success: false,
+        error: `Bid must be at least ${auction.reservePrice} AVAX (reserve price)`
+      });
+    }
+    
+    // Validate user is not the host
+    if (userAddress.toLowerCase() === auction.host.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Host cannot bid on their own auction'
+      });
+    }
+    
+    // Place bid (this would require user signature in real implementation)
+    // For now, we'll return validation success
+    res.json({
+      success: true,
+      data: {
+        auctionId: parseInt(auctionId),
+        bidAmount: newBid,
+        userAddress,
+        currentHighestBid: currentBid,
+        reservePrice: auction.reservePrice
+      },
+      message: 'Bid validation successful. Please sign the transaction in your wallet.'
+    });
+    
+  } catch (error) {
+    console.error(`Error validating bid for auction ${req.params.auctionId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate bid'
     });
   }
 });

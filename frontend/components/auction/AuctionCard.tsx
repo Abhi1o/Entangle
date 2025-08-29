@@ -68,6 +68,25 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
 
     setLoading(true);
     try {
+      // First validate with backend
+      const validationResponse = await fetch(`/api/auctions/${auctionId}/bid`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bidAmount: parseFloat(bidAmount),
+          userAddress: currentUser
+        }),
+      });
+      
+      const validationResult = await validationResponse.json();
+      
+      if (!validationResult.success) {
+        throw new Error(validationResult.error);
+      }
+      
+      // If validation passes, place bid on blockchain
       const tx = await service.placeBid(auctionId, bidAmount);
       toast({
         title: "Bid placed successfully!",
@@ -111,13 +130,26 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
   const endAuction = async () => {
     setLoading(true);
     try {
-      const tx = await service.endAuction(auctionId);
-      toast({
-        title: "Auction ended successfully!",
-        description: `Transaction: ${tx.transactionHash}`,
+      // Call backend to end auction
+      const response = await fetch(`/api/auctions/${auctionId}/end`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
-      loadAuction();
-      onUpdate?.();
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Auction ended successfully!",
+          description: `Transaction: ${result.data.transactionHash}`,
+        });
+        loadAuction();
+        onUpdate?.();
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error: any) {
       toast({
         title: "Failed to end auction",

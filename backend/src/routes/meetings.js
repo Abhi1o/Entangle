@@ -139,6 +139,76 @@ router.get('/notifications', authenticateToken, async (req, res) => {
   }
 });
 
+// Validate and burn NFT for meeting access
+router.post('/nft/:tokenId/burn', async (req, res) => {
+  try {
+    const { tokenId } = req.params;
+    const { userAddress } = req.body;
+    
+    if (!userAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'User address is required'
+      });
+    }
+    
+    // Get Web3Service instance
+    const Web3Service = require('../services/Web3Service');
+    const web3Service = new Web3Service('FUJI');
+    
+    // Check if user can burn NFT
+    const canBurn = await web3Service.canBurnForMeeting(parseInt(tokenId), userAddress);
+    
+    if (!canBurn) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot burn NFT for meeting access. Check ownership and meeting status.'
+      });
+    }
+    
+    // Get NFT metadata
+    const metadata = await web3Service.getNFTMetadata(parseInt(tokenId));
+    
+    // Validate meeting timing (example logic)
+    const now = Math.floor(Date.now() / 1000);
+    const meetingTime = metadata.mintTimestamp + (metadata.meetingDuration * 60); // Convert minutes to seconds
+    
+    if (now < meetingTime - 3600) { // 1 hour before meeting
+      return res.status(400).json({
+        success: false,
+        error: 'Meeting access not available yet. Please wait until closer to meeting time.'
+      });
+    }
+    
+    if (now > meetingTime + 3600) { // 1 hour after meeting
+      return res.status(400).json({
+        success: false,
+        error: 'Meeting access has expired.'
+      });
+    }
+    
+    // Return validation success
+    res.json({
+      success: true,
+      data: {
+        tokenId: parseInt(tokenId),
+        userAddress,
+        metadata,
+        canBurn: true,
+        meetingTime: new Date(meetingTime * 1000).toISOString()
+      },
+      message: 'NFT burn validation successful. Please sign the transaction in your wallet.'
+    });
+    
+  } catch (error) {
+    console.error(`Error validating NFT burn for token ${req.params.tokenId}:`, error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to validate NFT burn'
+    });
+  }
+});
+
 // Mark notification as read
 router.put('/notifications/:id/read', authenticateToken, async (req, res) => {
   try {

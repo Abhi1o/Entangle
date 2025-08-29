@@ -137,12 +137,9 @@ export class MeetingAuctionService {
     return await tx.wait();
   }
 
-  // End an auction
+  // End an auction - moved to backend for better reliability
   async endAuction(auctionId: number) {
-    if (!this.contract) throw new Error('Contract not initialized');
-    
-    const tx = await this.contract.endAuction(auctionId);
-    return await tx.wait();
+    throw new Error('endAuction() has been moved to backend. Use the API endpoint instead.');
   }
 
   // Get auction details

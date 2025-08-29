@@ -93,7 +93,7 @@ async function main() {
 
     // Test 5: Get active auctions
     console.log("📋 Test 5: Getting active auctions...");
-    const activeAuctions = await contract.getActiveAuctions();
+    const activeAuctions = await contract.getActiveAuctions(10); // Get up to 10 active auctions
     console.log(`   Active auctions count: ${activeAuctions.length}`);
     for (let i = 0; i < activeAuctions.length; i++) {
       console.log(`   Active Auction ID: ${activeAuctions[i].toString()}`);

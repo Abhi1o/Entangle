@@ -237,6 +237,16 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
             <p className="text-sm text-green-600">
               Winning bid: {currentBid} AVAX
             </p>
+            {auction.nftTokenId && auction.nftTokenId.toNumber() > 0 && (
+              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
+                <p className="text-xs text-blue-800 font-semibold">
+                  🎫 NFT Token ID: #{auction.nftTokenId.toString()}
+                </p>
+                <p className="text-xs text-blue-600">
+                  Meeting access NFT has been minted
+                </p>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

@@ -1,10 +1,10 @@
 {
-  "address": "0x17199dd9acB0Cf8f6b58c7DB1BDA6f26dF875B00",
+  "address": "0xA514E844fe0a671D07d35B2897F6523C09cD9ecC",
   "network": "fuji",
   "chainId": 43113,
   "deployer": "0xE129236aAf50E8890a3eaad082FF37232bAB37b2",
-  "timestamp": "2025-08-28T05:32:30.792Z",
-  "transactionHash": "0xab0e8eb4691fe40f50f3b6b45f3d5b482b82921633f7ac3d58c46d38c0d12e10",
+  "timestamp": "2025-08-28T13:20:11.373Z",
+  "transactionHash": "0x6cfc65c88f7d56e72624f1a3634d25dfa54b24de906f6c41f4a6c22899b38e8f",
   "platformFee": "250",
   "contractName": "MeetingAuction"
 }

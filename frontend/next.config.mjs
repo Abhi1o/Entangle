@@ -54,6 +54,14 @@ const nextConfig = {
   // Disable strict mode temporarily to avoid double mounting issues
   reactStrictMode: false,
   
+  // Handle route groups properly
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    // Enable app directory features
+    appDir: true,
+  },
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -72,6 +80,8 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
+    // Enable app directory features
+    appDir: true,
   },
   
   // Headers for better caching

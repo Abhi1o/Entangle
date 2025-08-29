@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { MeetingAuctionService } from '@/lib/contract';
-import { AuctionList } from '@/components/auction/AuctionList';
-import { Button } from '@/components/ui/button';
+import { NFTList } from '@/components/nft/NFTList';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Gift, Wallet, ExternalLink } from 'lucide-react';
 
-export default function AuctionsPage() {
+export default function NFTsPage() {
   const [service, setService] = useState<MeetingAuctionService | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userAddress, setUserAddress] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -23,13 +25,21 @@ export default function AuctionsPage() {
         setError(null);
         
         if (initialized) {
+          // Get current user address
+          const provider = newService.getProvider();
+          if (provider) {
+            const signer = provider.getSigner();
+            const address = await signer.getAddress();
+            setUserAddress(address);
+          }
+          
           toast({
             title: "Connected to Avalanche Fuji",
-            description: "Contract service initialized successfully",
+            description: "NFT service initialized successfully",
           });
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to initialize contract service';
+        const errorMessage = err instanceof Error ? err.message : 'Failed to initialize NFT service';
         setError(errorMessage);
         setIsInitialized(false);
         
@@ -91,13 +101,60 @@ export default function AuctionsPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Meeting Auctions</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <Gift className="h-8 w-8 text-orange-500" />
+          <h1 className="text-3xl font-bold">My Meeting NFTs</h1>
+        </div>
         <p className="text-gray-600">
-          Bid on exclusive meetings with industry leaders and experts
+          Manage your meeting access passes from winning auctions
         </p>
       </div>
 
-      <AuctionList service={service} />
+      <NFTList service={service} userAddress={userAddress} />
+
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>About Meeting NFTs</CardTitle>
+            <CardDescription>How meeting access works with NFTs</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600 mb-2">1</div>
+                <h3 className="font-semibold mb-2">Win Auction</h3>
+                <p className="text-sm text-gray-600">
+                  Place the highest bid on a meeting auction
+                </p>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600 mb-2">2</div>
+                <h3 className="font-semibold mb-2">Get NFT</h3>
+                <p className="text-sm text-gray-600">
+                  Receive a meeting access NFT automatically
+                </p>
+              </div>
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <div className="text-2xl font-bold text-orange-600 mb-2">3</div>
+                <h3 className="font-semibold mb-2">Burn to Access</h3>
+                <p className="text-sm text-gray-600">
+                  Burn your NFT to access the meeting
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-6 p-4 bg-yellow-50 rounded-lg">
+              <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Important Notes</h4>
+              <ul className="text-sm text-yellow-700 space-y-1">
+                <li>• Burning an NFT is irreversible - you can only use it once</li>
+                <li>• Each NFT grants access to one specific meeting</li>
+                <li>• You must burn the NFT to join the meeting</li>
+                <li>• Make sure you're ready to attend before burning</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="mt-8">
         <Card>
@@ -123,9 +180,10 @@ export default function AuctionsPage() {
                   href="https://testnet.snowtrace.io/address/0xA514E844fe0a671D07d35B2897F6523C09cD9ecC"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 hover:underline flex items-center gap-1"
                 >
                   View on Snowtrace
+                  <ExternalLink className="h-3 w-3" />
                 </a>
               </div>
               <div>

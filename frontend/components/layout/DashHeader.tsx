@@ -246,6 +246,18 @@ const DashHeader = () => {
               Marketplace
             </Link>
             <Link
+              href="/auctions"
+              className="text-lblm hover:text-white transition-colors"
+            >
+              Auctions
+            </Link>
+            <Link
+              href="/nfts"
+              className="text-lblm hover:text-white transition-colors"
+            >
+              My NFTs
+            </Link>
+            <Link
               href={isLoggedIn ? "/dashboard" : "#"}
               onClick={handleDashboardClick}
               className="text-lblm hover:text-white transition-colors"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -9,6 +9,9 @@ import { FormSelect, FormSelectItem } from "@/components/ui/form-select";
 import { FormField } from "@/components/ui/form-field";
 import { FormButton } from "@/components/ui/form-button";
 import TrendingCard from "../cards/trending-card";
+import { MeetingAuctionService } from "@/lib/contract";
+import { useAccount } from "@getpara/react-sdk";
+import { toast } from "sonner";
 
 type ModalStep =
 	| "invite-code"
@@ -40,6 +43,10 @@ export default function EventPostingModal({
 	isModalOpen: boolean;
 	onClose: () => void;
 }) {
+	const account = useAccount();
+	const [contractService, setContractService] = useState<MeetingAuctionService | null>(null);
+	const [isContractInitialized, setIsContractInitialized] = useState(false);
+	
 	const [currentStep, setCurrentStep] = useState<ModalStep>("create-event");
 	const [stepNumber, setStepNumber] = useState(1);
 	const [eventData, setEventData] = useState<EventData>({
@@ -57,6 +64,29 @@ export default function EventPostingModal({
 	});
 
 	const [errors, setErrors] = useState<Record<string, string>>({});
+
+	// Initialize contract service when user is authenticated
+	useEffect(() => {
+		const initContract = async () => {
+			if (account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0) {
+				try {
+					const service = new MeetingAuctionService('FUJI');
+					const initialized = await service.initialize();
+					setContractService(service);
+					setIsContractInitialized(initialized);
+					
+					if (initialized) {
+						console.log('✅ Contract service initialized for auction creation');
+					}
+				} catch (error) {
+					console.error('❌ Failed to initialize contract service:', error);
+					toast.error('Failed to connect to blockchain. Please refresh and try again.');
+				}
+			}
+		};
+
+		initContract();
+	}, [account.isConnected, account.embedded.wallets]);
 
 	const handleOpenModal = () => {
 		setCurrentStep("create-event");
@@ -111,6 +141,14 @@ export default function EventPostingModal({
 
 		if (!eventData.endTime.trim()) {
 			newErrors.endTime = "End time is required";
+		} else if (eventData.startTime && eventData.endTime) {
+			// Validate that end time is after start time
+			const startTime = new Date(`2000-01-01T${eventData.startTime}`);
+			const endTime = new Date(`2000-01-01T${eventData.endTime}`);
+			
+			if (endTime <= startTime) {
+				newErrors.endTime = "End time must be after start time";
+			}
 		}
 
 		if (!eventData.closingDate.trim()) {
@@ -141,10 +179,22 @@ export default function EventPostingModal({
 		return Object.keys(newErrors).length === 0;
 	};
 
-	const handleNextStep = () => {
+	const handleNextStep = async () => {
 		switch (currentStep) {
 			case "create-event":
 				if (validateCreateEvent()) {
+					// Check if user is authenticated
+					if (!account.isConnected || !account.embedded.wallets?.length) {
+						toast.error('Please connect your wallet first');
+						return;
+					}
+
+					// Check if contract is initialized
+					if (!isContractInitialized) {
+						toast.error('Connecting to blockchain... Please wait');
+						return;
+					}
+
 					setCurrentStep("preview");
 					setStepNumber(2);
 				}
@@ -152,10 +202,41 @@ export default function EventPostingModal({
 			case "preview":
 				setCurrentStep("loading");
 				setStepNumber(0);
-				// Simulate loading then error
-				setTimeout(() => {
+				
+				try {
+					// Create auction on blockchain
+					const tx = await createAuctionOnChain();
+					
+					// Show success (tx is already the receipt from contract service)
+					toast.success('Auction created successfully!');
+					
+					// Redirect to auctions page after a short delay
+					setTimeout(() => {
+						window.location.href = '/auctions';
+					}, 2000);
+					
+				} catch (error: any) {
+					console.error('Failed to create auction:', error);
+					
+					// Show specific error messages
+					if (error.message.includes('insufficient funds')) {
+						toast.error('Insufficient funds for gas fees');
+					} else if (error.message.includes('user rejected')) {
+						toast.error('Transaction was cancelled');
+					} else if (error.message.includes('Twitter ID already used')) {
+						toast.error('Twitter ID conflict detected. Please try again.');
+					} else if (error.message.includes('execution reverted')) {
+						// Extract the specific revert reason
+						const revertReason = error.message.match(/reason="([^"]+)"/)?.[1] || 'Transaction failed';
+						toast.error(`Transaction failed: ${revertReason}`);
+					} else if (error.message.includes('value out-of-bounds')) {
+						toast.error('Invalid input values. Please check your form data.');
+					} else {
+						toast.error(error.message || 'Failed to create auction');
+					}
+					
 					setCurrentStep("error");
-				}, 3000);
+				}
 				break;
 		}
 	};
@@ -188,8 +269,90 @@ export default function EventPostingModal({
 		setErrors({});
 	};
 
+	const handleRetry = () => {
+		setCurrentStep("preview");
+		setStepNumber(2);
+	};
+
 	const updateEventData = (field: keyof EventData, value: string) => {
 		setEventData((prev) => ({ ...prev, [field]: value }));
+	};
+
+	// Create auction on blockchain
+	const createAuctionOnChain = async () => {
+		if (!contractService || !isContractInitialized) {
+			throw new Error('Contract service not initialized');
+		}
+
+		if (!account.embedded.wallets?.[0]?.address) {
+			throw new Error('No wallet address found');
+		}
+
+		// Calculate auction duration in blocks (assuming 2 second block time)
+		const auctionEndDate = new Date(`${eventData.closingDate}T${eventData.closingTime}`);
+		const now = new Date();
+		const durationInSeconds = Math.floor((auctionEndDate.getTime() - now.getTime()) / 1000);
+		const durationInBlocks = Math.max(Math.floor(durationInSeconds / 2), 100); // Minimum 100 blocks
+
+		// Calculate meeting duration in minutes
+		const meetingStart = new Date(`${eventData.dateOfEvent}T${eventData.startTime}`);
+		const meetingEnd = new Date(`${eventData.dateOfEvent}T${eventData.endTime}`);
+		let meetingDurationMinutes = Math.floor((meetingEnd.getTime() - meetingStart.getTime()) / (1000 * 60));
+		
+		// Ensure positive duration (handle cases where end time is before start time)
+		if (meetingDurationMinutes < 0) {
+			// If end time is before start time, assume it's the next day
+			const nextDayEnd = new Date(`${eventData.dateOfEvent}T${eventData.endTime}`);
+			nextDayEnd.setDate(nextDayEnd.getDate() + 1);
+			meetingDurationMinutes = Math.floor((nextDayEnd.getTime() - meetingStart.getTime()) / (1000 * 60));
+		}
+		
+		// Ensure minimum duration of 1 minute
+		meetingDurationMinutes = Math.max(meetingDurationMinutes, 1);
+
+		// Create metadata IPFS hash (simplified for demo)
+		const metadataIPFS = `ipfs://event_${Date.now()}_${eventData.eventName.replace(/\s+/g, '_')}`;
+
+		// Generate unique Twitter ID (combine user ID with timestamp)
+		const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+		const twitterId = account.embedded.userId ? 
+			`${account.embedded.userId}_${uniqueId}` : 
+			`user_${uniqueId}`;
+
+		try {
+			console.log('🚀 Creating auction with parameters:', {
+				host: account.embedded.wallets[0].address,
+				twitterId,
+				duration: durationInBlocks,
+				reservePrice: eventData.floorPrice,
+				metadataIPFS,
+				meetingDuration: meetingDurationMinutes
+			});
+			
+			console.log('📊 Form data for debugging:', {
+				dateOfEvent: eventData.dateOfEvent,
+				startTime: eventData.startTime,
+				endTime: eventData.endTime,
+				meetingStart: meetingStart.toISOString(),
+				meetingEnd: meetingEnd.toISOString(),
+				calculatedDuration: meetingDurationMinutes
+			});
+
+			const tx = await contractService.createAuction(
+				account.embedded.wallets[0].address, // host
+				twitterId, // twitterId
+				durationInBlocks, // duration in blocks
+				eventData.floorPrice, // reserve price
+				metadataIPFS, // metadata IPFS
+				meetingDurationMinutes // meeting duration in minutes
+			);
+
+			console.log('✅ Auction created successfully:', tx);
+			return tx;
+		} catch (error) {
+			console.error('❌ Failed to create auction:', error);
+			throw error;
+		}
 	};
 
 	const renderModalContent = () => {
@@ -280,7 +443,33 @@ export default function EventPostingModal({
 							</Button>
 						</div>
 
-						
+						{/* Authentication Status */}
+						{!account.isConnected && (
+							<div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4">
+								<p className="text-red-400 text-sm">
+									⚠️ Please connect your wallet to create an auction
+								</p>
+							</div>
+						)}
+
+						{account.isConnected && !isContractInitialized && (
+							<div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+								<p className="text-yellow-400 text-sm">
+									🔄 Connecting to blockchain...
+								</p>
+							</div>
+						)}
+
+						{account.isConnected && isContractInitialized && (
+							<div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
+								<p className="text-green-400 text-sm">
+									✅ Connected to Avalanche Fuji Testnet
+								</p>
+								<p className="text-green-400/70 text-xs mt-1">
+									Wallet: {account.embedded.wallets?.[0]?.address?.slice(0, 6)}...{account.embedded.wallets?.[0]?.address?.slice(-4)}
+								</p>
+							</div>
+						)}
 
 						<div className="space-y-3 md:space-y-4">
 							<FormInput
@@ -515,12 +704,17 @@ export default function EventPostingModal({
 									alt="Loading"
 									width={80}
 									height={80}
-									className="md:w-[100px] md:h-[100px]"
+									className="md:w-[100px] md:h-[100px] animate-pulse"
 								/>
 							</div>
-							<h2 className="text-xl md:text-2xl font-semibold text-white">Please wait</h2>
-							<p className="text-gray-400 text-sm md:text-base">Broadcasting this transaction</p>
-							<p className="text-xs md:text-sm">See it on Etherscan</p>
+							<h2 className="text-xl md:text-2xl font-semibold text-white">Creating Auction</h2>
+							<p className="text-gray-400 text-sm md:text-base">Broadcasting transaction to Avalanche</p>
+							<p className="text-xs md:text-sm">This may take a few moments...</p>
+							<div className="mt-4">
+								<div className="w-full bg-gray-700 rounded-full h-2">
+									<div className="bg-yellow-500 h-2 rounded-full animate-pulse" style={{width: '60%'}}></div>
+								</div>
+							</div>
 						</div>
 					</div>
 				);
@@ -542,7 +736,7 @@ export default function EventPostingModal({
 							<div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3 pt-4">
 								<FormButton
 									variant="outline"
-									onClick={handleStartOver}
+									onClick={handleRetry}
 									className="flex-1 h-12 md:h-14 text-sm md:text-base font-medium">
 									Try Again
 								</FormButton>

@@ -38,6 +38,7 @@ const Hero = () => {
           <div className="w-3/4"></div>
           <div className="absolute right-0 md:-bottom-20 bottom-0 top-1/2 md:top-auto">
             <Image
+              priority={false}
               src="/home-page/hero-hand.png"
               alt="Hand holding hourglass"
               width={800}
@@ -45,6 +46,7 @@ const Hero = () => {
               className="ml-auto hidden md:block"
             />
             <Image
+              priority={false}
               src="/home-page/hero-hand.png"
               alt="Hand holding hourglass"
               width={400}

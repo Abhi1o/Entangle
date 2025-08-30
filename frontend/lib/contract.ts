@@ -137,9 +137,12 @@ export class MeetingAuctionService {
     return await tx.wait();
   }
 
-  // End an auction - moved to backend for better reliability
+  // End an auction
   async endAuction(auctionId: number) {
-    throw new Error('endAuction() has been moved to backend. Use the API endpoint instead.');
+    if (!this.contract) throw new Error('Contract not initialized');
+    
+    const tx = await this.contract.endAuction(auctionId);
+    return await tx.wait();
   }
 
   // Get auction details
@@ -224,6 +227,13 @@ export class MeetingAuctionService {
     if (!this.contract) throw new Error('Contract not initialized');
     
     return await this.contract.getBidderStats(bidderAddress);
+  }
+
+  // Get NFT token URI
+  async tokenURI(tokenId: number) {
+    if (!this.contract) throw new Error('Contract not initialized');
+    
+    return await this.contract.tokenURI(tokenId);
   }
 }
 

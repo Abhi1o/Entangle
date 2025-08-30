@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import Image from "next/image";
+import { MeetingAuctionService } from "@/lib/contract";
+import { useAccount } from "@getpara/react-sdk";
+import { toast } from "sonner";
 
 import { Check, Cross, CrossIcon, Share2, Trash, X } from "lucide-react";
 
@@ -24,16 +27,23 @@ const transactionTableData = {
   ],
 };
 
-const eventDetail = {
-  profileImage: "/home-page/person.png",
-  name: "Isabella Ray",
-  username: "isabellar",
-  title: "AI Hackathon",
-  date: "10th April 2025",
-  time: "09:00 - 18:00 GMT",
-  floorPrice: "2.2 ETH",
-  currentBid: "2.9 ETH",
-};
+// Auction data interface
+interface AuctionData {
+  id: number;
+  host: string;
+  twitterId: string;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  reservePrice: string;
+  highestBid: string;
+  highestBidder: string;
+  meetingDuration: number;
+  metadataIPFS: string;
+  isActive: boolean;
+  isEnded: boolean;
+  nftTokenId?: number;
+}
 
 // Simple modal component for minting process
 interface MintingModalProps {
@@ -130,53 +140,79 @@ const MintingModal = ({ isOpen, onClose }: MintingModalProps) => {
 // Custom bidding component with built-in status handling
 type BidStatus = "idle" | "loading" | "success" | "error";
 
-const BiddingComponent = () => {
+interface BiddingComponentProps {
+  auctionId: number;
+  currentBid: string;
+  reservePrice: string;
+  onBidSuccess: () => void;
+  onClose: () => void;
+}
+
+const BiddingComponent = ({ auctionId, currentBid, reservePrice, onBidSuccess, onClose }: BiddingComponentProps) => {
   const [bidAmount, setBidAmount] = useState("");
   const [status, setStatus] = useState<BidStatus>("idle");
-  const [currentBid, setCurrentBid] = useState("345 USD");
+  const [contractService, setContractService] = useState<MeetingAuctionService | null>(null);
+  const account = useAccount();
+
+  // Initialize contract service
+  useEffect(() => {
+    const initContract = async () => {
+      try {
+        const service = new MeetingAuctionService('FUJI');
+        const initialized = await service.initialize();
+        setContractService(service);
+      } catch (error) {
+        console.error('Failed to initialize contract service:', error);
+        toast.error('Failed to connect to blockchain');
+      }
+    };
+
+    initContract();
+  }, []);
 
   // Handle submitting a bid
-  const handleSubmitBid = () => {
-    // Set loading state
+  const handleSubmitBid = async () => {
+    if (!contractService || !account.embedded.wallets?.[0]?.address) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (!bidAmount || parseFloat(bidAmount) <= parseFloat(currentBid)) {
+      toast.error('Bid must be higher than current bid');
+      return;
+    }
+
     setStatus("loading");
 
-    // Simulate processing
-    const timer = setTimeout(() => {
-      // 80% success rate
-      const isSuccess = Math.random() < 0.8;
-      setStatus(isSuccess ? "success" : "error");
-
-      // Update current bid on success
-      if (isSuccess && bidAmount) {
-        setCurrentBid(`${bidAmount} USD`);
+    try {
+      const tx = await contractService.placeBid(auctionId, bidAmount);
+      
+      setStatus("success");
+      onBidSuccess();
+      
+      // Close modal after success
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Bid failed:', error);
+      setStatus("error");
+      
+      if (error.message.includes('insufficient funds')) {
+        toast.error('Insufficient funds for bid');
+      } else if (error.message.includes('user rejected')) {
+        toast.error('Transaction was cancelled');
+      } else {
+        toast.error(error.message || 'Failed to place bid');
       }
-    }, 3000);
-
-    return () => clearTimeout(timer);
-  };
-
-  // Handle closing the modal
-  const handleClose = () => {
-    setStatus("idle");
-    setBidAmount("");
+    }
   };
 
   // Handle retry on error
   const handleRetry = () => {
-    setStatus("loading");
-
-    // Simulate processing again
-    const timer = setTimeout(() => {
-      const isSuccess = Math.random() < 0.8;
-      setStatus(isSuccess ? "success" : "error");
-
-      // Update current bid on success
-      if (isSuccess && bidAmount) {
-        setCurrentBid(`${bidAmount} USD`);
-      }
-    }, 3000);
-
-    return () => clearTimeout(timer);
+    setStatus("idle");
+    setBidAmount("");
   };
 
   // If we're in a loading/success/error state, show the status modal
@@ -191,30 +227,47 @@ const BiddingComponent = () => {
               alt="Loading"
               width={100}
               height={100}
+              className="animate-pulse"
             />
           ) : status === "success" ? (
-            <div className="h-24 w-24 bg-action-primary rounded-full" />
+            <div className="h-24 w-24 bg-green-500 rounded-full flex items-center justify-center">
+              <Check className="h-12 w-12 text-white" />
+            </div>
           ) : (
-            <div className="h-24 w-24 bg-action-primary rounded-full" />
+            <div className="h-24 w-24 bg-red-500 rounded-full flex items-center justify-center">
+              <X className="h-12 w-12 text-white" />
+            </div>
           )}
 
           {/* Title */}
           <h2 className="text-2xl font-semibold text-white">
             {status === "loading"
-              ? "Please wait"
+              ? "Placing Bid"
               : status === "success"
-              ? "Your bid was placed!"
-              : "Oops!"}
+              ? "Bid Placed Successfully!"
+              : "Bid Failed"}
           </h2>
 
           {/* Description */}
           <p className="text-medium-emphasis text-center">
             {status === "loading"
-              ? "Waiting for on-chain confirmation"
+              ? "Broadcasting transaction to Avalanche..."
               : status === "success"
-              ? "Check your dashboard for further notifications and to sync to your calendar."
-              : "Something went wrong. You should probably redo your last actions."}
+              ? "Your bid has been placed on the blockchain"
+              : "Something went wrong. Please try again."}
           </p>
+
+          {/* Action buttons for error state */}
+          {status === "error" && (
+            <div className="flex space-x-4">
+              <FormButton variant="outline" onClick={onClose}>
+                Close
+              </FormButton>
+              <FormButton onClick={handleRetry}>
+                Try Again
+              </FormButton>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -228,7 +281,8 @@ const BiddingComponent = () => {
       <div className="flex gap-6">
         <div className="mb-6">
           <p className="text-gray-400 text-sm mb-1">CURRENT BID</p>
-          <p className="text-white text-3xl font-bold">{currentBid}</p>
+          <p className="text-white text-3xl font-bold">{currentBid} AVAX</p>
+          <p className="text-gray-500 text-sm mt-1">Reserve: {reservePrice} AVAX</p>
         </div>
 
         <div className="space-y-4">
@@ -238,8 +292,10 @@ const BiddingComponent = () => {
               type="number"
               value={bidAmount}
               onChange={(e) => setBidAmount(e.target.value)}
-              placeholder="Place a higher bid"
+              placeholder="Enter bid amount in AVAX"
               className="bg-transparent"
+              step="0.01"
+              min={parseFloat(currentBid) + 0.01}
             />
           </div>
 
@@ -248,10 +304,11 @@ const BiddingComponent = () => {
             onClick={handleSubmitBid}
             disabled={
               !bidAmount ||
-              parseInt(bidAmount) <= parseInt(currentBid.split(" ")[0])
+              parseFloat(bidAmount) <= parseFloat(currentBid) ||
+              parseFloat(bidAmount) < parseFloat(reservePrice)
             }
           >
-            Submit a bid
+            Submit Bid
           </FormButton>
         </div>
       </div>
@@ -385,12 +442,54 @@ const CancelEventModal = ({ isOpen, onClose }: CancelEventModalProps) => {
 
 const HostEventDetails = () => {
   const searchParams = useSearchParams();
-  const owner = searchParams.get("owner");
+  const params = useParams();
+  const account = useAccount();
+  
+  const [auctionData, setAuctionData] = useState<AuctionData | null>(null);
+  const [contractService, setContractService] = useState<MeetingAuctionService | null>(null);
+  const [isContractInitialized, setIsContractInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [isMintModalOpen, setIsMintModalOpen] = useState(false);
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
-  const isHost = owner === "host";
+  const auctionId = searchParams.get("auctionId") || params.id;
+  const isHost = auctionData?.host === account.embedded.wallets?.[0]?.address;
+
+  // Initialize contract service and fetch auction data
+  useEffect(() => {
+    const initContract = async () => {
+      try {
+        const service = new MeetingAuctionService('FUJI');
+        const initialized = await service.initialize();
+        setContractService(service);
+        setIsContractInitialized(initialized);
+        
+        if (initialized && auctionId) {
+          await fetchAuctionData(service);
+        }
+      } catch (error) {
+        console.error('Failed to initialize contract service:', error);
+        toast.error('Failed to connect to blockchain');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initContract();
+  }, [auctionId]);
+
+  const fetchAuctionData = async (service: MeetingAuctionService) => {
+    try {
+      const auction = await service.getAuction(parseInt(auctionId as string));
+      console.log('📊 Fetched auction data:', auction);
+      setAuctionData(auction);
+    } catch (error) {
+      console.error('Failed to fetch auction data:', error);
+      toast.error('Failed to load auction details');
+    }
+  };
 
   const handleMintEvent = () => {
     setIsMintModalOpen(true);
@@ -401,6 +500,10 @@ const HostEventDetails = () => {
   };
 
   const handleOpenBidModal = () => {
+    if (!account.isConnected) {
+      toast.error('Please connect your wallet to place a bid');
+      return;
+    }
     setIsBidModalOpen(true);
   };
 
@@ -416,6 +519,61 @@ const HostEventDetails = () => {
     setIsCancelModalOpen(false);
   };
 
+  const handleBidSuccess = () => {
+    // Refresh auction data after successful bid
+    if (contractService) {
+      fetchAuctionData(contractService);
+    }
+  };
+
+  // Format auction data for TrendingCard
+  const formatAuctionForCard = (auction: AuctionData) => {
+    const startTime = new Date(auction.startTime * 1000);
+    const endTime = new Date((auction.startTime + auction.meetingDuration * 60) * 1000);
+    
+    return {
+      profileImage: "/home-page/person.png",
+      name: `Host ${auction.host.slice(0, 6)}...${auction.host.slice(-4)}`,
+      username: auction.twitterId || "anonymous",
+      eventTitle: auction.metadataIPFS || `Meeting ${auction.id}`,
+      eventDate: startTime.toLocaleDateString('en-US', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      }),
+      eventTime: `${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}`,
+      floorPrice: `${auction.reservePrice} AVAX`,
+      currentBid: auction.highestBid ? `${auction.highestBid} AVAX` : "No bids yet"
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="w-full font-sans">
+        <Container className="w-full mt-4 md:mt-6">
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+            <span className="ml-3 text-gray-400">Loading auction details...</span>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  if (!auctionData) {
+    return (
+      <div className="w-full font-sans">
+        <Container className="w-full mt-4 md:mt-6">
+          <div className="text-center py-12">
+            <p className="text-gray-400">Auction not found</p>
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  const cardData = formatAuctionForCard(auctionData);
+
   return (
     <div className="w-full font-sans">
       <Container className="w-full mt-4 md:mt-6">
@@ -423,14 +581,14 @@ const HostEventDetails = () => {
           <div className="w-full flex flex-col md:flex-row gap-4 md:gap-6 justify-center items-center md:items-start max-w-3xl">
             <div className="w-full flex-1">
               <TrendingCard
-                profileImage={eventDetail.profileImage}
-                name={eventDetail.name}
-                username={eventDetail.username}
-                eventTitle={eventDetail.title}
-                eventDate={eventDetail.date}
-                eventTime={eventDetail.time}
-                floorPrice={eventDetail.floorPrice}
-                currentBid={eventDetail.currentBid}
+                profileImage={cardData.profileImage}
+                name={cardData.name}
+                username={cardData.username}
+                eventTitle={cardData.eventTitle}
+                eventDate={cardData.eventDate}
+                eventTime={cardData.eventTime}
+                floorPrice={cardData.floorPrice}
+                currentBid={cardData.currentBid}
               />
             </div>
 
@@ -496,7 +654,7 @@ const HostEventDetails = () => {
       <MintingModal isOpen={isMintModalOpen} onClose={handleCloseModal} />
 
       {/* Bidding Modal */}
-      {isBidModalOpen && (
+      {isBidModalOpen && auctionData && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           {/* Backdrop */}
           <div
@@ -506,7 +664,13 @@ const HostEventDetails = () => {
 
           {/* Modal Content */}
           <div className="relative z-10 max-w-md mx-auto">
-            <BiddingComponent />
+            <BiddingComponent 
+              auctionId={auctionData.id}
+              currentBid={auctionData.highestBid || "0"}
+              reservePrice={auctionData.reservePrice}
+              onBidSuccess={handleBidSuccess}
+              onClose={handleCloseBidModal}
+            />
           </div>
         </div>
       )}

@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useAccount } from "@getpara/react-sdk";
+import { useAuth } from "@/hooks/use-auth";
 
 import Hero from "@/components/home-page/Hero"
 import MMSection from "@/components/home-page/mm-section"
@@ -10,8 +10,7 @@ import Trending from "@/components/home-page/trending"
 import Footer from "@/components/layout/footer"
 
 export default function Home() {
-  const account = useAccount();
-  const isLoggedIn = account.isConnected && account.embedded.wallets?.length && account.embedded.wallets.length > 0;
+  const { isLoggedIn } = useAuth();
   
   return (
     <main className="min-h-screen text-white font-sans">

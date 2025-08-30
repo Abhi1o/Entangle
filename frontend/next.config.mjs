@@ -80,8 +80,6 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    // Enable app directory features
-    appDir: true,
   },
   
   // Headers for better caching

@@ -119,7 +119,7 @@ contract MeetingAuction is ReentrancyGuard, Ownable, Pausable, ERC721 {
         uint256 _reservePrice,
         string memory _metadataIPFS,
         uint256 _meetingDuration
-    ) external onlyOwner whenNotPaused returns (uint256) {
+    ) external whenNotPaused returns (uint256) {
         require(!usedTwitterIds[_twitterId], "Twitter ID already used");
         require(_duration > ANTI_SNIPE_BLOCKS, "Duration too short");
         require(_reservePrice >= MIN_BID_INCREMENT, "Reserve too low");
@@ -259,7 +259,7 @@ contract MeetingAuction is ReentrancyGuard, Ownable, Pausable, ERC721 {
     function scheduleMeeting(
         uint256 _auctionId,
         string memory _meetingAccessHash
-    ) external onlyOwner {
+    ) external {
         Auction storage auction = auctions[_auctionId];
         require(auction.ended, "Auction not ended");
         require(!auction.meetingScheduled, "Meeting already scheduled");

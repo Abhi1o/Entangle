@@ -532,7 +532,7 @@ const HostEventDetails = () => {
     const endTime = new Date((auction.startTime + auction.meetingDuration * 60) * 1000);
     
     return {
-      profileImage: "/home-page/person.png",
+      profileImage: "/assets/home-page/person.png",
       name: `Host ${auction.host.slice(0, 6)}...${auction.host.slice(-4)}`,
       username: auction.twitterId || "anonymous",
       eventTitle: auction.metadataIPFS || `Meeting ${auction.id}`,

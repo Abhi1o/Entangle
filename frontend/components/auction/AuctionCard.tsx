@@ -29,6 +29,7 @@ export const AuctionCard: React.FC<AuctionCardProps> = ({ auctionId, service, on
   }, [auctionId]);
 
   const getCurrentUser = async () => {
+    // Only run on client side to prevent hydration mismatches
     if (typeof window !== 'undefined' && window.ethereum) {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' }) as string[];

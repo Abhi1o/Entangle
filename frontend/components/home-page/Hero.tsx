@@ -5,13 +5,13 @@ import Container from "@/components/layout/container";
 
 const Hero = () => {
   return (
-    <section className="w-full relative min-h-screen bg-[url('/home-page/hero-bg.svg')] bg-cover">
+    <section className="w-full relative min-h-screen bg-[url('/assets/home-page/hero-bg.svg')] bg-cover">
       <Container className="h-screen">
         <div className="flex flex-col md:flex-row md:items-center md:justify-center h-full">
           <div className="mb-8 md:mb-0 md:max-w-[460px] px-4 md:px-0">
             <div className="mb-4 md:mb-6 h-full mt-24 md:mt-0">
               <Image
-                src="/logos/hero_logo.svg"
+                src="/assets/logos/hero_logo.svg"
                 alt="Carpe Tempus Logo"
                 width={120}
                 height={120}
@@ -39,7 +39,7 @@ const Hero = () => {
           <div className="absolute right-0 md:-bottom-20 bottom-0 top-1/2 md:top-auto">
             <Image
               priority={true}
-              src="/home-page/hero-hand.png"
+              src="/assets/home-page/hero-hand.png"
               alt="Hand holding hourglass"
               width={800}
               height={800}
@@ -47,7 +47,7 @@ const Hero = () => {
             />
             <Image
               priority={true}
-              src="/home-page/hero-hand.png"
+              src="/assets/home-page/hero-hand.png"
               alt="Hand holding hourglass"
               width={400}
               height={400}

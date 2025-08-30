@@ -28,7 +28,7 @@ const Trending = () => {
                 className="w-full"
               >
                 <TrendingCard
-                  profileImage="/home-page/person.png"
+                  profileImage="/assets/home-page/person.png"
                   name="John Doe"
                   username="JohnDoe"
                   eventTitle="Another fun event"

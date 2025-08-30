@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useAuth } from "@/hooks/use-auth";
+import { ClientOnly } from "@/components/auth/ClientOnly";
 
 import Hero from "@/components/home-page/Hero"
 import MMSection from "@/components/home-page/mm-section"
@@ -76,7 +77,7 @@ export default function Home() {
               <div key={i} className="flex-shrink-0 w-[280px] sm:w-full rounded-lg p-8 sm:p-4 border-light bg-srf-l2">
                 <div className="mb-2 sm:mb-4">
                   <Image
-                    src={`/home-page/person.png`}
+                    src={`/assets/home-page/person.png`}
                     alt={`${testimonial.name} avatar`}
                     width={64}
                     height={64}
@@ -92,14 +93,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Login Status Display - Only show after hydration */}
-      {isHydrated && (
+      {/* Login Status Display - Client only to prevent hydration issues */}
+      <ClientOnly>
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-400">
             {isLoggedIn ? "You are logged in!" : "You are not logged in."}
           </p>
         </div>
-      )}
+      </ClientOnly>
 
       {/* Footer */}
       <Footer />

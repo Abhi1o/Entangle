@@ -7,10 +7,11 @@ import { useModal } from "@getpara/react-sdk";
 import Container from "@/components/layout/container";
 import { UserAccountMenu } from "@/components/auth";
 import { useAuth } from "@/hooks/use-auth";
+import { ClientOnly } from "@/components/auth/ClientOnly";
 
 const DashHeader = () => {
   const { openModal } = useModal();
-  const { isLoggedIn, isHydrated } = useAuth();
+  const { isLoggedIn } = useAuth();
 
   const handleLoginClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -24,7 +25,7 @@ const DashHeader = () => {
           <div>
             <Link href="/">
               <Image
-                src="/logos/hero_logo.svg"
+                src="/assets/logos/hero_logo.svg"
                 alt="Logo"
                 width={30}
                 height={30}
@@ -65,30 +66,28 @@ const DashHeader = () => {
               Profile
             </Link>
             
-            {/* Authentication Components - Only render after hydration */}
-            {isHydrated && (
-              <>
-                {isLoggedIn ? (
-                  <>
-                    <Link
-                      href="/dashboard"
-                      className="text-lblm hover:text-white transition-colors"
-                    >
-                      Dashboard
-                    </Link>
-                    <UserAccountMenu />
-                  </>
-                ) : (
-                  <Button
-                    onClick={handleLoginClick}
-                    variant="ghost"
+            {/* Authentication Components - Client only to prevent hydration issues */}
+            <ClientOnly>
+              {isLoggedIn ? (
+                <>
+                  <Link
+                    href="/dashboard"
                     className="text-lblm hover:text-white transition-colors"
                   >
-                    Login
-                  </Button>
-                )}
-              </>
-            )}
+                    Dashboard
+                  </Link>
+                  <UserAccountMenu />
+                </>
+              ) : (
+                <Button
+                  onClick={handleLoginClick}
+                  variant="ghost"
+                  className="text-lblm hover:text-white transition-colors"
+                >
+                  Login
+                </Button>
+              )}
+            </ClientOnly>
           </nav>
           
           <div className="md:hidden">

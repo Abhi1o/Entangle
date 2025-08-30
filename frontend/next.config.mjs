@@ -5,7 +5,7 @@ const nextConfig = {
   
   // Enable image optimization
   images: {
-    unoptimized: false,
+    unoptimized: true, // Disable optimization for static assets
     formats: ['image/webp', 'image/avif'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
@@ -62,11 +62,6 @@ const nextConfig = {
     return config;
   },
   
-  // Disable type checking during build for now
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  
   // Disable ESLint during build
   eslint: {
     ignoreDuringBuilds: true,
@@ -79,6 +74,9 @@ const nextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
+  
+  // Suppress hydration warnings in development
+  reactStrictMode: false,
   
   // Headers for better caching
   async headers() {

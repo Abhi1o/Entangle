@@ -11,7 +11,7 @@ import TrendingCard from "@/components/cards/trending-card";
 
 const trendingEvents = [
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Alice Johnson",
         username: "alicej",
         title: "Tech Conference 2025",
@@ -22,7 +22,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Bob Smith",
         username: "bobsmith",
         title: "Web3 Meetup",
@@ -33,7 +33,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Clara Bell",
         username: "clarabell",
         title: "Design Jam",
@@ -44,7 +44,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "David Lee",
         username: "davidl",
         title: "React Summit",
@@ -55,7 +55,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Eva Green",
         username: "evagreen",
         title: "Crypto Panel",
@@ -66,7 +66,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Frank Ocean",
         username: "franko",
         title: "Blockchain Basics",
@@ -77,7 +77,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Grace Hall",
         username: "gracehall",
         title: "NFT Workshop",
@@ -88,7 +88,7 @@ const trendingEvents = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Henry Wu",
         username: "henrywu",
         title: "Startup Pitch",
@@ -102,7 +102,7 @@ const trendingEvents = [
 
 const all = [
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Isabella Ray",
         username: "isabellar",
         title: "AI Hackathon",
@@ -113,7 +113,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Jack Tran",
         username: "jacktran",
         title: "Product Demo Day",
@@ -124,7 +124,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Karen Watts",
         username: "karenwatts",
         title: "UX Review Session",
@@ -135,7 +135,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Leo Park",
         username: "leopark",
         title: "Frontend Fireside",
@@ -146,7 +146,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Mia Chen",
         username: "miachen",
         title: "Web3 vs Web2 Debate",
@@ -157,7 +157,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Nathan Cole",
         username: "nathanc",
         title: "Crypto Q&A",
@@ -168,7 +168,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Olivia Zhang",
         username: "oliviaz",
         title: "Dev Showcase",
@@ -179,7 +179,7 @@ const all = [
         href: "/event/random-event-id"
     },
     {
-        profileImage: "/home-page/person.png",
+        profileImage: "/assets/home-page/person.png",
         name: "Peter Kim",
         username: "peterkim",
         title: "Solidity Bootcamp",
@@ -246,7 +246,7 @@ const MarketPlace = () => {
         const endTime = new Date((auction.startTime + auction.meetingDuration * 60) * 1000);
         
         return {
-            profileImage: "/home-page/person.png",
+            profileImage: "/assets/home-page/person.png",
             name: `Host ${auction.host.slice(0, 6)}...${auction.host.slice(-4)}`,
             username: auction.twitterId || "anonymous",
             eventTitle: auction.metadataIPFS || `Meeting ${index + 1}`,

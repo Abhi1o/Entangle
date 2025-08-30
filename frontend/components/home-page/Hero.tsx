@@ -38,20 +38,20 @@ const Hero = () => {
           <div className="w-3/4"></div>
           <div className="absolute right-0 md:-bottom-20 bottom-0 top-1/2 md:top-auto">
             <Image
-              priority={false}
+              priority={true}
               src="/home-page/hero-hand.png"
               alt="Hand holding hourglass"
               width={800}
               height={800}
-              className="ml-auto hidden md:block"
+              className="ml-auto hidden md:block w-auto h-auto"
             />
             <Image
-              priority={false}
+              priority={true}
               src="/home-page/hero-hand.png"
               alt="Hand holding hourglass"
               width={400}
               height={400}
-              className="ml-auto md:hidden max-w-[80%]"
+              className="ml-auto md:hidden max-w-[80%] w-auto h-auto"
             />
           </div>
         </div>

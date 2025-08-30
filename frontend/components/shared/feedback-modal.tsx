@@ -141,7 +141,7 @@ export default function FeedbackModal({
     switch (currentType) {
       case "loading":
         return {
-          icon: icon || <Image src="/assets/hour_glass.png" alt="Loading" width={100} height={100} />,
+          icon: icon || <Image src="/assets/hour_glass.png" alt="Loading" width={100} height={100} className="w-auto h-auto" />,
           title: currentTitle || "Loading...",
           description: currentDescription || "Please wait while we process your request.",
           showButtons: false,

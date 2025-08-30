@@ -28,7 +28,7 @@ const DashHeader = () => {
                 alt="Logo"
                 width={30}
                 height={30}
-                className="h-10"
+                className="h-10 w-auto h-auto"
               />
             </Link>
           </div>

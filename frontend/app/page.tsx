@@ -80,7 +80,7 @@ export default function Home() {
                     alt={`${testimonial.name} avatar`}
                     width={64}
                     height={64}
-                    className="rounded-full sm:w-10 sm:h-10"
+                    className="rounded-full sm:w-10 sm:h-10 w-auto h-auto"
                   />
                   <div className="mt-4 sm:text-sm font-[700] text-titlem">{testimonial.name}</div>
                   <div className="mb-4 text-text-med text-bodys">@{testimonial.name}</div>

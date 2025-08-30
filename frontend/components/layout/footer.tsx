@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="container mx-auto">
         <div className="flex flex-col items-start justify-between gap-4 sm:gap-6 md:flex-row md:items-center">
           <div>
-            <Image src="/logos/hero_logo.svg" alt="Carpe Tempus Logo" width={60} height={60} className="mb-3 sm:mb-4 sm:w-10 sm:h-10" />
+            <Image src="/logos/hero_logo.svg" alt="Carpe Tempus Logo" width={60} height={60} className="mb-3 sm:mb-4 sm:w-10 sm:h-10 w-auto h-auto" />
             <p className="mb-3 sm:mb-4 max-w-xs text-bodys text-text-med">
               Entangle makes it possible to trade your time on the open market using blockchain.
             </p>
@@ -21,7 +21,13 @@ const Footer = () => {
             <div className="flex items-center gap-3 sm:gap-4">
               {["x", "telegram", "discord", "reddit", "github", "linkedin"].map((social) => (
                 <Link key={social} href="#" className="text-text-med hover:text-white">
-                  <Image src={`/home-page/socials/${social}.svg`} alt={social} width={15} height={15} />
+                  <Image 
+                    src={`/home-page/socials/${social}.svg`} 
+                    alt={social} 
+                    width={15}
+                    height={15}
+                    className="w-auto h-auto"
+                  />
                 </Link>
               ))}
             </div>

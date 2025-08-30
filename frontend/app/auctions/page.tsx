@@ -110,7 +110,7 @@ export default function AuctionsPage() {
               <div>
                 <p className="text-gray-500">Contract Address</p>
                 <p className="font-mono text-xs break-all">
-                  0xA514E844fe0a671D07d35B2897F6523C09cD9ecC
+                                     0xceBD87246e91C7D70C82D5aE5C196a0028543933
                 </p>
               </div>
               <div>
@@ -120,7 +120,7 @@ export default function AuctionsPage() {
               <div>
                 <p className="text-gray-500">Explorer</p>
                 <a 
-                  href="https://testnet.snowtrace.io/address/0xA514E844fe0a671D07d35B2897F6523C09cD9ecC"
+                  href="https://testnet.snowtrace.io/address/0xceBD87246e91C7D70C82D5aE5C196a0028543933"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline"

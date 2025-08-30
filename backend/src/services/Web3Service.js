@@ -4,7 +4,7 @@ require('dotenv').config();
 // Contract configuration
 const CONTRACT_CONFIG = {
   FUJI: {
-    address: '0xA514E844fe0a671D07d35B2897F6523C09cD9ecC',
+    address: '0xceBD87246e91C7D70C82D5aE5C196a0028543933',
     chainId: 43113,
     rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
     explorer: 'https://testnet.snowtrace.io'

@@ -10,7 +10,7 @@ import Trending from "@/components/home-page/trending"
 import Footer from "@/components/layout/footer"
 
 export default function Home() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isHydrated } = useAuth();
   
   return (
     <main className="min-h-screen text-white font-sans">
@@ -92,8 +92,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Login Status Display */}
-      
+      {/* Login Status Display - Only show after hydration */}
+      {isHydrated && (
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-400">
+            {isLoggedIn ? "You are logged in!" : "You are not logged in."}
+          </p>
+        </div>
+      )}
 
       {/* Footer */}
       <Footer />

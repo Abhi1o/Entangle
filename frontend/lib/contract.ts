@@ -4,7 +4,7 @@ import { ethers } from 'ethers';
 export const CONTRACT_CONFIG = {
   // Avalanche Fuji Testnet
   FUJI: {
-    address: '0xA514E844fe0a671D07d35B2897F6523C09cD9ecC',
+    address: '0xceBD87246e91C7D70C82D5aE5C196a0028543933',
     chainId: 43113,
     rpcUrl: 'https://api.avax-test.network/ext/bc/C/rpc',
     explorer: 'https://testnet.snowtrace.io'
@@ -112,16 +112,39 @@ export class MeetingAuctionService {
     
     const reservePriceWei = ethers.utils.parseEther(reservePrice);
     
-    const tx = await this.contract.createAuction(
-      host,
-      twitterId,
-      duration,
-      reservePriceWei,
-      metadataIPFS,
-      meetingDuration
-    );
-    
-    return await tx.wait();
+    try {
+      // Try with automatic gas estimation first
+      const tx = await this.contract.createAuction(
+        host,
+        twitterId,
+        duration,
+        reservePriceWei,
+        metadataIPFS,
+        meetingDuration
+      );
+      
+      return await tx.wait();
+    } catch (error: any) {
+      // If gas estimation fails, try with manual gas limit
+      if (error.message.includes('UNPREDICTABLE_GAS_LIMIT') || error.message.includes('Unable to get transaction hash')) {
+        console.log('🔄 Retrying with manual gas limit...');
+        
+        const tx = await this.contract.createAuction(
+          host,
+          twitterId,
+          duration,
+          reservePriceWei,
+          metadataIPFS,
+          meetingDuration,
+          {
+            gasLimit: 500000 // Manual gas limit
+          }
+        );
+        
+        return await tx.wait();
+      }
+      throw error;
+    }
   }
 
   // Place a bid

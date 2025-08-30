@@ -3,10 +3,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ParaProvider } from "@getpara/react-sdk";
 import "@getpara/react-sdk/styles.css";
+import { HydrationSafe } from "./hydration-safe";
 
 const queryClient = new QueryClient();
 
-export function Providers({ children }: { children: React.ReactNode }) {
+function ParaProviderWrapper({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <ParaProvider
@@ -41,5 +42,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
         {children}
       </ParaProvider>
     </QueryClientProvider>
+  );
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <HydrationSafe>
+      <ParaProviderWrapper>
+        {children}
+      </ParaProviderWrapper>
+    </HydrationSafe>
   );
 }

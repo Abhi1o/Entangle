@@ -10,7 +10,7 @@ import { useAuth } from "@/hooks/use-auth";
 
 const DashHeader = () => {
   const { openModal } = useModal();
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, isHydrated } = useAuth();
 
   const handleLoginClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -28,7 +28,7 @@ const DashHeader = () => {
                 alt="Logo"
                 width={30}
                 height={30}
-                className="h-10 w-auto h-auto"
+                className="h-10 w-auto"
               />
             </Link>
           </div>
@@ -65,25 +65,29 @@ const DashHeader = () => {
               Profile
             </Link>
             
-            {/* Authentication Components */}
-            {isLoggedIn ? (
+            {/* Authentication Components - Only render after hydration */}
+            {isHydrated && (
               <>
-                <Link
-                  href="/dashboard"
-                  className="text-lblm hover:text-white transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <UserAccountMenu />
+                {isLoggedIn ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="text-lblm hover:text-white transition-colors"
+                    >
+                      Dashboard
+                    </Link>
+                    <UserAccountMenu />
+                  </>
+                ) : (
+                  <Button
+                    onClick={handleLoginClick}
+                    variant="ghost"
+                    className="text-lblm hover:text-white transition-colors"
+                  >
+                    Login
+                  </Button>
+                )}
               </>
-            ) : (
-              <Button
-                onClick={handleLoginClick}
-                variant="ghost"
-                className="text-lblm hover:text-white transition-colors"
-              >
-                Login
-              </Button>
             )}
           </nav>
           

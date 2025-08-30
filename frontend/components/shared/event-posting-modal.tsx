@@ -12,6 +12,7 @@ import TrendingCard from "../cards/trending-card";
 import { MeetingAuctionService } from "@/lib/contract";
 import { useAccount } from "@getpara/react-sdk";
 import { toast } from "sonner";
+import { ethers } from "ethers";
 
 type ModalStep =
 	| "invite-code"
@@ -231,6 +232,10 @@ export default function EventPostingModal({
 						toast.error(`Transaction failed: ${revertReason}`);
 					} else if (error.message.includes('value out-of-bounds')) {
 						toast.error('Invalid input values. Please check your form data.');
+					} else if (error.message.includes('Unable to get transaction hash')) {
+						toast.error('Transaction failed. Please check your wallet balance and try again.');
+					} else if (error.message.includes('network') || error.message.includes('connection')) {
+						toast.error('Network connection issue. Please check your internet and try again.');
 					} else {
 						toast.error(error.message || 'Failed to create auction');
 					}
@@ -318,6 +323,27 @@ export default function EventPostingModal({
 		const twitterId = account.embedded.userId ? 
 			`${account.embedded.userId}_${uniqueId}` : 
 			`user_${uniqueId}`;
+
+		// Check wallet balance and network
+		try {
+			const balance = await contractService.getProvider()?.getBalance(account.embedded.wallets[0].address);
+			const balanceEth = ethers.utils.formatEther(balance || 0);
+			console.log('💰 Wallet balance:', balanceEth, 'AVAX');
+			
+			if (parseFloat(balanceEth) < 0.01) {
+				throw new Error('Insufficient balance. You need at least 0.01 AVAX for gas fees.');
+			}
+
+			// Check network
+			const network = await contractService.getProvider()?.getNetwork();
+			console.log('🌐 Network:', network);
+			
+			if (network?.chainId !== 43113) {
+				throw new Error('Please switch to Avalanche Fuji Testnet (Chain ID: 43113)');
+			}
+		} catch (error) {
+			console.error('❌ Balance/Network check failed:', error);
+		}
 
 		try {
 			console.log('🚀 Creating auction with parameters:', {
